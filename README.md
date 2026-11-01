@@ -257,7 +257,7 @@ The station refuses Shell jobs by default. Enable them on the device under 设�
 
 With 同步剪贴板 (Sync clipboard) on in 设置 → 权限与审批 (Settings → Permissions and approvals), the device and the server share the clipboard:
 
-- Text and pictures copied on the device are written over SSH to `~/.render-station/clipboard/` on the server within about a second: the newest as `latest.txt` or `latest.png` (pictures always become PNG), the last 50 in `history/`. Of several copied in a row, only the last is sent; while the tunnel is down, the newest is sent once it is back.
+- Text and pictures copied on the device are written over SSH to `~/.render-station/clipboard/` on the server within about a second: the newest as `latest.txt` or `latest.png` (pictures always become PNG), the last 50 in `history/`. Of several copied in a row, only the last is sent; while the tunnel is down, the newest is sent once it is back. The folder is in the home of the account the device logs in as, the one the password file names; `rs` and `xclip` look there and in `$HOME` when that differs from it, and read what came last.
 - The server puts text or a picture on the device's clipboard with `rs clip set`; what it puts there is not sent back.
 - On the server, `rs clip` prints the newest (for a picture, its path) and `rs clip ls` lists the history. Both read the files on the server and do not need the device.
 - What a password manager or similar program marks as not to be recorded, and anything over 20 MB, is not synced.

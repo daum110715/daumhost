@@ -182,7 +182,7 @@ rs clip ls [--json]
 rs clip set [<文字…>] [--file <路径>] [--json]
 ```
 
-设备上开启「同步剪贴板」后，在设备上复制的文字和图片会自动写入服务器的 `~/.render-station/clipboard/`，见 README 的「剪贴板同步」。
+设备上开启「同步剪贴板」后，在设备上复制的文字和图片会自动写入服务器的 `~/.render-station/clipboard/`，见 README 的「剪贴板同步」。`rs clip` 和 `xclip` 会在该账号的主目录和（与之不同时）`$HOME` 里都找，读最后到的那一份。
 
 - `rs clip`：输出最新的一份。文字原样输出；图片输出其 PNG 文件的路径。
 - `rs clip ls`：列出最近 50 份，从新到旧，包括时间、类型、大小、路径和文字的开头。

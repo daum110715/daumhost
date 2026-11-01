@@ -8,8 +8,8 @@
 // refused; 2 for a usage error; 3 when no worker is reached, or it is paused or its queue full.
 import { request } from 'node:http';
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { basename, dirname, join, resolve } from 'node:path';
+import { homedir, userInfo } from 'node:os';
+import { basename, delimiter, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createGunzip, gzipSync } from 'node:zlib';
 import { HEADER, PORTS, PROTOCOL } from './worker.mjs';
@@ -151,7 +151,14 @@ What the commands do, or what one does.`,
 // ——— by the name xclip (a link to this): the clipboard of this server, as programs here ask it with
 // xclip (Claude Code, for a picture to paste), is the device's. Read, it is what came from there
 // (in ~/.render-station/clipboard/); written, it goes there as rs clip set puts it ———
-const CLIP_DIR = join(homedir(), '.render-station/clipboard');
+// The device pushes over ssh, which lands in the account's own home, the one the password file names;
+// a program here can run with another HOME (a login that set it, an account whose home was moved). So
+// the clipboard is looked for in both, and what came last wins.
+// (RENDER_STATION_HOMES, a list of folders, names them instead: for the tests.)
+const CLIP_DIRS = [...new Set(process.env.RENDER_STATION_HOMES ? process.env.RENDER_STATION_HOMES.split(delimiter) : [homedir(), userInfo().homedir])].map((home) => join(home, '.render-station/clipboard'));
+const CLIP_DIR = CLIP_DIRS[0];
+/** the newest file of this name in any of the clipboard folders, or null */
+const clipFind = (name) => CLIP_DIRS.map((d) => join(d, name)).filter((f) => existsSync(f)).sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0] ?? null;
 const XCLIP = ['out', 'in', 'target', 'selection', 'display', 'loops', 'filter', 'rmlastnl', 'quiet', 'silent', 'verbose', 'noutf8', 'sensitive', 'version', 'help'];
 /** what was written to xclip, for rs clip set */
 let xclipData = null;
@@ -171,7 +178,7 @@ if (basename(process.argv[1] ?? '') === 'xclip') {
     process.exit(0);
   }
   if (x.out) {
-    const has = { png: existsSync(join(CLIP_DIR, 'latest.png')), txt: existsSync(join(CLIP_DIR, 'latest.txt')) };
+    const has = { png: clipFind('latest.png'), txt: clipFind('latest.txt') };
     const target = x.target ?? 'UTF8_STRING';
     const TEXT = ['UTF8_STRING', 'STRING', 'TEXT', 'text/plain', 'text/plain;charset=utf-8'];
     if (target === 'TARGETS') {
@@ -181,12 +188,12 @@ if (basename(process.argv[1] ?? '') === 'xclip') {
       process.exit(0);
     }
     const text = TEXT.some((t) => t.toLowerCase() === target.toLowerCase());
-    const file = target === 'image/png' && has.png ? 'latest.png' : text && has.txt ? 'latest.txt' : null;
+    const file = target === 'image/png' && has.png ? has.png : text && has.txt ? has.txt : null;
     if (!file) {
       if (!x.quiet && !x.silent) console.error(`Error: target ${target} not available`);
       process.exit(1);
     }
-    let data = readFileSync(join(CLIP_DIR, file));
+    let data = readFileSync(file);
     if (x.rmlastnl && data.at(-1) === 10) data = data.subarray(0, data.at(-2) === 13 ? -2 : -1);
     writeFileSync(1, data);
     process.exit(0);
@@ -325,11 +332,10 @@ const clipFile = (path) => {
 if (what === 'clip' && words[0] !== 'set') {
   if (opts.file) usage('clip: --file is for set');
   if (words.length > 1 || (words.length && words[0] !== 'ls')) usage('clip: nothing, ls or set');
-  const latest = ['latest.txt', 'latest.png'].map((f) => join(CLIP_DIR, f)).filter((f) => existsSync(f)).map(clipFile).sort((a, b) => b.at - a.at)[0];
-  const none = `nothing copied on the device has come here yet (${CLIP_DIR}); it comes while 同步剪贴板 (clipboard sync) is on in the render station's settings there`;
+  const latest = ['latest.txt', 'latest.png'].map(clipFind).filter(Boolean).map(clipFile).sort((a, b) => b.at - a.at)[0];
+  const none = `nothing copied on the device has come here yet (${CLIP_DIRS.join(' or ')}); it comes while 同步剪贴板 (clipboard sync) is on in the render station's settings there`;
   if (words[0] === 'ls') {
-    const history = join(CLIP_DIR, 'history');
-    const list = existsSync(history) ? readdirSync(history).filter((f) => /\.(txt|png)$/.test(f)).map((f) => clipFile(join(history, f))).sort((a, b) => b.at - a.at) : [];
+    const list = CLIP_DIRS.map((d) => join(d, 'history')).filter((h) => existsSync(h)).flatMap((h) => readdirSync(h).filter((f) => /\.(txt|png)$/.test(f)).map((f) => clipFile(join(h, f)))).sort((a, b) => b.at - a.at);
     if (opts.json) finish({ ok: true, entries: list }, 0);
     if (!list.length) finish({ ok: false, error: none }, 1);
     const pad = (n) => String(n).padStart(2, '0');

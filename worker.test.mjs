@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
+import { delimiter, join, resolve } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { HEADER, PROTOCOL, serve } from './worker.mjs';
 import { FILE, changeWorkspaces, commandOf, gather, globRe, listFolder, resolveWorkspaces, safeRel, within } from './workspace.mjs';
@@ -323,7 +323,7 @@ test('cli.mjs clip puts text or a picture on the device\'s clipboard, and reads 
     await f.ready;
     const cli = (args, input) =>
       new Promise((done) => {
-        const p = execFile(process.execPath, [join(repo, 'cli.mjs'), ...args], { env: { ...process.env, HOME: f.base, RENDER_STATION_PORT: String(f.server.address().port) } }, (e, stdout, stderr) => done({ code: e?.code ?? 0, stdout, stderr }));
+        const p = execFile(process.execPath, [join(repo, 'cli.mjs'), ...args], { env: { ...process.env, HOME: f.base, RENDER_STATION_HOMES: f.base, RENDER_STATION_PORT: String(f.server.address().port) } }, (e, stdout, stderr) => done({ code: e?.code ?? 0, stdout, stderr }));
         p.stdin.end(input);
       });
     assert.equal((await cli(['clip', 'set', 'hello', 'there'])).code, 0);
@@ -356,7 +356,7 @@ test('cli.mjs clip puts text or a picture on the device\'s clipboard, and reads 
     symlinkSync(join(repo, 'cli.mjs'), link);
     const xclip = (args, input) =>
       new Promise((done) => {
-        const p = execFile(process.execPath, [link, ...args], { encoding: 'buffer', env: { ...process.env, HOME: f.base, RENDER_STATION_PORT: String(f.server.address().port) } }, (e, stdout) => done({ code: e?.code ?? 0, stdout }));
+        const p = execFile(process.execPath, [link, ...args], { encoding: 'buffer', env: { ...process.env, HOME: f.base, RENDER_STATION_HOMES: f.base, RENDER_STATION_PORT: String(f.server.address().port) } }, (e, stdout) => done({ code: e?.code ?? 0, stdout }));
         p.stdin.end(input);
       });
     assert.match((await xclip(['-selection', 'clipboard', '-t', 'TARGETS', '-o'])).stdout.toString(), /UTF8_STRING/);
@@ -369,5 +369,18 @@ test('cli.mjs clip puts text or a picture on the device\'s clipboard, and reads 
     clip.on = () => true;
     assert.equal((await xclip(['-selection', 'clipboard'], 'from xclip')).code, 0);
     assert.deepEqual(sent.at(-1), { type: 'text', text: 'from xclip' });
+    // the device pushes into the account's own home, a program here may run with another HOME: both are
+    // looked in, and what came last is read (a stale picture in the one must not hide a new one in the other)
+    const other = join(f.base, 'passwd-home');
+    const stale = Buffer.from('stale picture');
+    mkdirSync(join(other, '.render-station/clipboard'), { recursive: true });
+    writeFileSync(join(other, '.render-station/clipboard/latest.png'), stale);
+    utimesSync(join(other, '.render-station/clipboard/latest.png'), new Date(Date.now() - 60000), new Date(Date.now() - 60000));
+    writeFileSync(join(dir, 'latest.png'), png);
+    const both = (args) =>
+      new Promise((done) => execFile(process.execPath, [link, ...args], { encoding: 'buffer', env: { ...process.env, HOME: f.base, RENDER_STATION_HOMES: `${other}${delimiter}${f.base}`, RENDER_STATION_PORT: String(f.server.address().port) } }, (e, stdout) => done({ code: e?.code ?? 0, stdout })));
+    assert.deepEqual((await both(['-selection', 'clipboard', '-t', 'image/png', '-o'])).stdout, png);
+    utimesSync(join(other, '.render-station/clipboard/latest.png'), new Date(), new Date());
+    assert.deepEqual((await both(['-selection', 'clipboard', '-t', 'image/png', '-o'])).stdout, stale);
   } finally { f.close(); }
 });

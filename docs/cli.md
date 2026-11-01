@@ -182,7 +182,7 @@ rs clip ls [--json]
 rs clip set [<text…>] [--file <path>] [--json]
 ```
 
-While the device has 同步剪贴板 (Sync clipboard) on, text and pictures copied there are written to `~/.render-station/clipboard/` on the server by themselves; see "Clipboard sync" in the README.
+While the device has 同步剪贴板 (Sync clipboard) on, text and pictures copied there are written to `~/.render-station/clipboard/` on the server by themselves; see "Clipboard sync" in the README. `rs clip` and `xclip` look in that account's home and in `$HOME`, when it differs, and read what came last.
 
 - `rs clip`: prints the newest. Text as it is; for a picture, the path of its PNG.
 - `rs clip ls`: lists the last 50, newest first, with the time, type, size, path and the start of the text.
