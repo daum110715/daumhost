@@ -84,12 +84,12 @@ function fixture({ manage = null, clip = null } = {}) {
 }
 
 test('globs, relative paths and preset arguments', () => {
-  assert.ok(globRe('promo/lib/*').test('promo/lib/a.mjs'));
-  assert.ok(!globRe('promo/lib/*').test('promo/lib/x/a.mjs'));
-  assert.ok(globRe('promo/**').test('promo/lib/x/a.mjs'));
+  assert.ok(globRe('job/lib/*').test('job/lib/a.mjs'));
+  assert.ok(!globRe('job/lib/*').test('job/lib/x/a.mjs'));
+  assert.ok(globRe('job/**').test('job/lib/x/a.mjs'));
   assert.ok(!globRe('a.mjs').test('aXmjs'));
   for (const bad of ['', '/abs', '../up', 'a/../b', 'a//b', 'C:/x', 'a\\b', './a']) assert.equal(safeRel(bad), false, bad);
-  assert.ok(safeRel('promo/render.mjs'));
+  assert.ok(safeRel('job/render.mjs'));
   const preset = SPEC.presets.make;
   assert.deepEqual(commandOf(preset, ['--n', '3'], { job: '/j', workspace: '/w' }), ['node', '/j/tool/make.mjs', '--n', '3']);
   assert.throws(() => commandOf(preset, ['--n', '3; rm'], { job: '/j', workspace: '/w' }), /not taken/);

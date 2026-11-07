@@ -72,7 +72,7 @@ function note(kind, text) {
   log(text);
   say(kind, text);
 }
-/** a stream's text line by line; a '\r' ends a line too (render.mjs rewrites its progress) */
+/** a stream's text line by line; a '\r' ends a line too (a job may rewrite its progress line) */
 function liner(each) {
   let rest = '';
   return (chunk, end = false) => {
@@ -104,15 +104,6 @@ try {
   config = { ...config, ...saved, ssh: { ...config.ssh, ...saved.ssh } };
 } catch {}
 const save = () => writeFileSync(CONFIG, JSON.stringify(config, null, 2));
-// settings from before workspaces, the checkout render.mjs ran in (PROMO_ROOT) and the rest of its
-// environment, become one. Those of a station that ran from the checkout itself say no PROMO_ROOT:
-// they stay, for the workspace registered at that checkout to start from (adopt)
-if (config.env?.PROMO_ROOT) {
-  const { PROMO_ROOT: path, ...env } = config.env;
-  if (!config.workspaces.length) config.workspaces = [{ name: '', path, env: Object.fromEntries(Object.entries(env).filter(([, v]) => v !== '')) }];
-  delete config.env;
-  save();
-}
 config.shell = { enabled: false, rules: [], ...config.shell };
 /** the workspaces, as jobs see them */
 const workspaces = () => resolveWorkspaces(config.workspaces);
@@ -574,16 +565,16 @@ function startWorker() {
         note(e.kind === 'shell' ? 'shell' : 'job', `任务 #${e.id} 正在排队：${label(e)}`);
       } else if (e.type === 'start') {
         const isShell = e.kind === 'shell';
-        const job = { id: e.id, kind: e.kind, what: label(e), started: Date.now(), n: 0, total: null, ms: null, frames: false };
+        const job = { id: e.id, kind: e.kind, what: label(e), started: Date.now(), n: 0, total: null };
         queued.delete(e.id);
         running.set(e.id, job);
         note(isShell ? 'shell' : 'job', `开始执行任务 #${e.id}：${job.what}`);
         say('out', isShell ? `> [${e.cwd}] ${e.command} (${e.approval})` : `> ${e.command.join(' ')}`, e.id);
         outs.set(e.id, liner((line) => say('out', line, e.id)));
       } else if (e.type === 'log' && running.has(e.id)) {
-        // progress, as a job prints it: "frame n/total", and after it "T=…  ms ms/frame" (render.mjs)
-        const frames = [...e.text.matchAll(/frame (\d+)\/(\d+)(?:\s+T=[\d.]+\s+(\d+) ms\/frame)?/g)].at(-1);
-        if (frames) Object.assign(running.get(e.id), { n: Number(frames[1]), total: Number(frames[2]), ms: frames[3] ? Number(frames[3]) : null, frames: true });
+        // progress, as a job prints it: "progress n/total" (or "frame n/total")
+        const seen = [...e.text.matchAll(/\b(?:progress|frame) (\d+)\/(\d+)/g)].at(-1);
+        if (seen) Object.assign(running.get(e.id), { n: Number(seen[1]), total: Number(seen[2]) });
         outs.get(e.id)?.(e.text);
       } else if (e.type === 'end') {
         const job = running.get(e.id);
@@ -596,7 +587,7 @@ function startWorker() {
         // turned away before it started: why
         if (!job) say('out', e.tail.trim(), e.id);
         const what = job?.what ?? waited?.what ?? '（未开始执行即被拒绝）';
-        jobs.unshift({ id: e.id, what, started: job?.started ?? Date.now(), ms: e.ms, ok: e.ok, files: e.files, paths: e.paths, tail: e.tail, rate: job?.ms ?? null });
+        jobs.unshift({ id: e.id, what, started: job?.started ?? Date.now(), ms: e.ms, ok: e.ok, files: e.files, paths: e.paths, tail: e.tail });
         jobs.length = Math.min(jobs.length, 20);
         if (today.day !== new Date().toDateString()) today = { day: new Date().toDateString(), done: 0, failed: 0 };
         today[e.ok ? 'done' : 'failed']++;

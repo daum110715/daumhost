@@ -4,7 +4,7 @@
 
 渲染站让服务器上运行的 agent 把高负载任务交给另一台电脑执行，目前支持 Windows。执行任务的电脑主动通过反向 SSH 隧道连接服务器，因此不需要公网 IP，也不需要开放入站端口。
 
-名字源自它最初的用途：为 qiqi.help 渲染宣传片。
+名字来自最初的用途：渲染。现在它接任何项目的任何重活。
 
 ## 术语
 
@@ -59,10 +59,6 @@
 ### 服务器
 
 克隆本仓库，并在仓库目录中执行 `npm link`，即可安装 `render-station` 和 `rs` 两个命令（见「命令行」）。不执行时，可在仓库目录中改用 `node cli.mjs`。
-
-### 从旧版本迁移
-
-渲染站曾位于 qiqi.help 的 `promo/remote/`。运行安装程序即可完成迁移：安装程序会关闭旧实例，并在新安装的副本没有设置时，复制旧检出中的 `.tools\remote\config.json`，服务器地址、Shell 白名单等设置因此保留。旧版的 `PROMO_*` 设置在把 qiqi.help 的检出登记为工作区时自动导入（见「工作区」）。新实例会重新创建快捷方式和开机自启项，并删除旧的自启项；旧的 `%LOCALAPPDATA%\qiqi-render-station\` 文件夹可以手动删除。
 
 ## 配置
 
@@ -131,8 +127,6 @@
 }
 ```
 
-qiqi.help 仓库根目录的 `render-station.json` 是一个实际的例子。
-
 顶层的 `parallel`（1–16，默认为 1）规定该工作区的预设任务最多同时运行几个。只有在确认这些任务不会争用同一批文件时，才应调大。
 
 ### `env`：需要的设置
@@ -163,6 +157,10 @@ qiqi.help 仓库根目录的 `render-station.json` 是一个实际的例子。
 
 `command`、`cwd`、`env` 和 `collect` 中可以使用两个占位符：`{job}` 为任务目录（设备上的 `.tools/remote/jobs/<编号>/`，每个任务独有，任务结束后删除），`{workspace}` 为工作区路径。
 
+### 通用工作区 `common`
+
+任何项目都不必有自己的工作区才能用这台电脑：`rs run --src <目录> --out <目录> common/node [参数…]` 带上这个目录，运行其中的 `main.mjs`，把它写进 `out/` 的文件取回。要用浏览器，把 `kit/chrome.mjs` 复制到脚本旁边（无头 Chrome 或 Edge，走 CDP）。工作区文件是 `kit/render-station.json`：放进 `rs ws add common F:/project/common --create` 建好的文件夹。不要借用别的项目的预设任务。
+
 ## 使用
 
 ### 托盘图标
@@ -190,7 +188,7 @@ qiqi.help 仓库根目录的 `render-station.json` 是一个实际的例子。
 
 同一页面也可在浏览器中访问：`http://127.0.0.1:7799`。在地址后加 `#gallery`、`#feed`、`#connection`、`#workspaces`、`#access`、`#machine` 或 `#about` 可直接打开对应页面；`#settings` 与 `#connection` 相同。
 
-任务输出中形如 `frame 12/300` 的行会被识别为进度：只有一个任务运行时显示在「总览」的进度条上，多个任务运行时显示在「运行中」列表中。
+任务输出中形如 `progress 12/300` 的行会被识别为进度：只有一个任务运行时显示在「总览」的进度条上，多个任务运行时显示在「运行中」列表中。
 
 ### 运行状态与日志
 

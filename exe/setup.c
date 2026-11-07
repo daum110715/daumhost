@@ -1,7 +1,7 @@
 // The installer, render-station-setup-<version>.exe: this program with a release appended (a gzipped
 // tar of all an installed copy holds: the station, its window's fonts, Node.js, the signed
 // release.json), then the version, the tar's size and a mark. Once the owner agrees, it has a running
-// station quit (the one from before the station left qiqi.help too), unpacks the tar into
+// station quit, unpacks the tar into
 // %LOCALAPPDATA%\Programs\render-station\ with Windows' own tar.exe, brings over the settings of a
 // station set up before, adds the station to Windows' installed apps (渲染站.exe --uninstall removes
 // it) and starts it. Per user: no administrator is needed, and the station updates itself there.
@@ -121,38 +121,30 @@ static int unpack(void) {
   return !code;
 }
 
-/** the settings of a station set up before, if this copy has none: those of the one from before the
- *  station left qiqi.help (its tray program in the checkout's promo\remote), or of one run from a
- *  checkout of its own; found by what starts it with Windows */
+/** the settings of a station set up before, if this copy has none: those of one run from a checkout of
+ *  its own; found by what starts it with Windows */
 static void bringSettings(void) {
   wchar_t mine[MAX_PATH + 64], folder[MAX_PATH + 32];
   FMT(mine, L"%ls\\.tools\\remote\\config.json", dir);
   if (isFile(mine)) return;
-  const wchar_t *names[] = { OLD_RUN_NAME, RUN_NAME };
-  const int up[] = { 2, 0 };
-  for (int i = 0; i < 2; i++) {
-    wchar_t v[MAX_PATH * 2], theirs[MAX_PATH * 2 + 64];
-    DWORD size = sizeof v;
-    if (RegGetValueW(HKEY_CURRENT_USER, RUN_KEY, names[i], RRF_RT_REG_SZ, NULL, v, &size) != ERROR_SUCCESS) continue;
-    // "<folder>\渲染站.exe" /quiet: the folder, and as far up as the checkout
-    wchar_t *p = v;
-    if (*p == L'"') {
-      p++;
-      wchar_t *q = wcschr(p, L'"');
-      if (q) *q = 0;
-    }
-    int levels = up[i] + 1;
-    for (int n = 0; n < levels; n++) {
-      wchar_t *cut = wcsrchr(p, L'\\');
-      if (cut) *cut = 0;
-    }
-    if (!_wcsicmp(p, dir)) continue;
-    FMT(theirs, L"%ls\\.tools\\remote\\config.json", p);
-    if (!isFile(theirs)) continue;
-    FMT(folder, L"%ls\\.tools\\remote", dir);
-    SHCreateDirectoryExW(NULL, folder, NULL);
-    if (CopyFileW(theirs, mine, TRUE)) return;
+  wchar_t v[MAX_PATH * 2], theirs[MAX_PATH * 2 + 64];
+  DWORD size = sizeof v;
+  if (RegGetValueW(HKEY_CURRENT_USER, RUN_KEY, RUN_NAME, RRF_RT_REG_SZ, NULL, v, &size) != ERROR_SUCCESS) return;
+  // "<folder>\渲染站.exe" /quiet: the folder
+  wchar_t *p = v;
+  if (*p == L'"') {
+    p++;
+    wchar_t *q = wcschr(p, L'"');
+    if (q) *q = 0;
   }
+  wchar_t *cut = wcsrchr(p, L'\\');
+  if (cut) *cut = 0;
+  if (!_wcsicmp(p, dir)) return;
+  FMT(theirs, L"%ls\\.tools\\remote\\config.json", p);
+  if (!isFile(theirs)) return;
+  FMT(folder, L"%ls\\.tools\\remote", dir);
+  SHCreateDirectoryExW(NULL, folder, NULL);
+  CopyFileW(theirs, mine, TRUE);
 }
 
 static void setString(HKEY k, const wchar_t *name, const wchar_t *value) {

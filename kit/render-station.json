@@ -1,0 +1,16 @@
+{
+	"name": "common",
+	"parallel": 4,
+	"presets": {
+		"node": {
+			"description": "Runs main.mjs brought by any project, and returns its out/ folder",
+			"command": ["node", "{job}/main.mjs", "{args}"],
+			"cwd": "{job}",
+			"upload": ["**"],
+			"args": ["[^\\n]{1,400}"],
+			"collect": "{job}/out",
+			"env": { "CHROME_PROFILES": "{workspace}/.profiles" },
+			"timeout": 3600
+		}
+	}
+}

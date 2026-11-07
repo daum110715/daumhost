@@ -24,7 +24,7 @@
         src: url('/fonts/outfit/files/outfit-latin-wght-normal.woff2') format('woff2-variations');
         unicode-range: U+0020-007E, U+00A0-00FF, U+2013-2014, U+2022;
       }
-      /* three looks, chosen in 设置 → 本机: 梅紫, warm paper and plum ink as qiqi.help has them, the
+      /* three looks, chosen in 设置 → 本机: 梅紫, warm paper and plum ink, the
          states in the tray icon's colours, light or dark as the system is; 青绿, 梅紫's frame in pale
          paper with a breath of cyan, the short run in the middle of green to cyan for what is chosen
          and for 执行中 (a teal, 空闲 a green), light or dark too; and 奶白, daum.pw's: the cream page with its
@@ -851,7 +851,7 @@
         background: none;
       }
       /* the rail's foot: how the station is, as the rail's last line, set as its names are, its dot
-         in their icons' column; above it a rule that is also how far (the frames made, the wait
+         in their icons' column; above it a rule that is also how far (the steps done, the wait
          before trying again), a plain rule while there is no telling */
       .rail-foot {
         display: grid;
@@ -1054,7 +1054,7 @@
         color: var(--ink-3);
       }
 
-      /* ——— 总览: the state, in words as large as the page has, and the frames as they are made ——— */
+      /* ——— 总览: the state, in words as large as the page has, and how far the job is ——— */
       .state {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
@@ -1094,7 +1094,7 @@
         grid-column: 1 / -1;
         margin-top: 20px;
       }
-      /* the frames: a cell each (or each so many), filled as they are made */
+      /* progress: a cell per step (or per so many), filled as it goes */
       .strip {
         --track: color-mix(in srgb, var(--state) 15%, transparent);
         display: grid;
@@ -2308,7 +2308,7 @@
           <div class="figures">
             <div class="figure"><span>今天</span><b id="f-today">0</b><small id="f-today-sub">个任务</small></div>
             <div class="figure"><span>上一个任务</span><b id="f-last">—</b><small id="f-last-sub">暂无</small></div>
-            <div class="figure"><span>速度</span><b id="f-rate">—</b><small>毫秒 / 帧</small></div>
+            <div class="figure"><span>排队</span><b id="f-queue">0</b><small>个任务等待</small></div>
             <div class="figure"><span>隧道</span><b id="f-tunnel">—</b><small id="f-tunnel-sub"></small></div>
           </div>
 
@@ -2907,7 +2907,7 @@
       };
       addEventListener('hashchange', () => show(fromHash() || 'home'));
 
-      // ——— the state, in words, and the frames as they are made ———
+      // ——— the state, in words, and how far the job is ———
       const SEGS = 48;
       /** a strip of cells, `fill` of them filled (a fraction); none while there is no telling how far */
       function strip(node, { fill = null, segs = SEGS }) {
@@ -2956,15 +2956,14 @@
         set('state-detail', text[2]);
         document.title = `渲染站 · ${text[0]}`;
 
-        // the strip: the frames made, or the wait before trying again; nothing while there is no telling
+        // the strip: how far the job is, or the wait before trying again; nothing while there is no telling
         const wrap = $('#strip-wrap');
         let left = '';
         let right = '';
         if (j?.total > 0) {
           strip($('#strip'), { fill: j.n / j.total });
-          left = `${j.n} / ${j.total} ${j.frames ? '帧' : '张'}，${Math.floor((j.n / j.total) * 100)}%`;
-          if (j.frames && j.ms) right = `${j.ms} 毫秒 / 帧，预计还需 ${took((j.total - j.n) * j.ms)}`;
-          else if (j.n) right = `预计还需 ${took(((j.total - j.n) * (now - j.started)) / j.n)}`;
+          left = `${j.n} / ${j.total}，${Math.floor((j.n / j.total) * 100)}%`;
+          if (j.n) right = `预计还需 ${took(((j.total - j.n) * (now - j.started)) / j.n)}`;
         } else if (mode === 'retry') {
           strip($('#strip'), { fill: t.wait ? (secs * 1000) / t.wait : 0 });
           left = `${secs} 秒后重新连接`;
@@ -3004,9 +3003,7 @@
         const last = S.jobs[0];
         set('f-last', last ? took(last.ms) : '—');
         set('f-last-sub', last ? `${ago(last.started + last.ms)}，${last.ok ? '成功' : '失败'}` : '暂无');
-        const rate = S.running.find((x) => x.ms)?.ms ?? S.jobs.find((x) => x.rate)?.rate;
-        if (rate) count($('#f-rate'), rate);
-        else word($('#f-rate'), '—');
+        count($('#f-queue'), S.queued.length);
         if (!gone && t.state === 'up') {
           set('f-tunnel', uptime(now - t.since));
           set('f-tunnel-sub', `服务器端口 ${t.port}`);
@@ -3056,7 +3053,7 @@
           const bar = what.lastChild;
           strip(bar, { fill: x.total > 0 ? x.n / x.total : null, segs: 32 });
           if (x.queued) set(detail, `已等待 ${took(now - x.at)}`);
-          else if (x.total > 0) set(detail, `${x.n} / ${x.total} ${x.frames ? '帧' : '张'}，已运行 ${took(now - x.started)}`);
+          else if (x.total > 0) set(detail, `${x.n} / ${x.total}，已运行 ${took(now - x.started)}`);
           else set(detail, `已运行 ${took(now - x.started)}`);
           tag.className = `tag ${x.queued ? 'wait' : 'run'}`;
           set(tag, x.queued ? '排队中' : '运行中');
@@ -3448,8 +3445,8 @@
       const KINDS = { job: ['job', 'out', 'shell'], tunnel: ['tunnel', 'ssh'] };
       const TAGS = { job: '任务', tunnel: '连接', station: '渲染站', shell: 'Shell' };
       const shows = (item) => !KINDS[filter] || KINDS[filter].includes(item.kind);
-      // a job's progress ("frame n/total"), one line rewritten
-      const progress = (item) => item?.kind === 'out' && /^frame \d+\/\d+/.test(item.text);
+      // a job's progress ("progress n/total"), one line rewritten
+      const progress = (item) => item?.kind === 'out' && /^(?:progress|frame) \d+\/\d+/.test(item.text);
       function line(item) {
         const raw = item.kind === 'out' || item.kind === 'ssh';
         const node = el('div', `ln k-${item.kind}${raw ? ' raw' : ''}${raw && item.job ? ' of-job' : ''}`);

@@ -951,8 +951,6 @@ static void openWindow(void) {
 static void runKey(int on) {
   HKEY k;
   if (RegOpenKeyExW(HKEY_CURRENT_USER, RUN_KEY, 0, KEY_SET_VALUE, &k) != ERROR_SUCCESS) return;
-  // the value it had while the station was part of qiqi.help, taken away
-  RegDeleteValueW(k, OLD_RUN_NAME);
   if (on) {
     wchar_t v[MAX_PATH + 16];
     FMT(v, L"\"%ls\" /quiet", launcher);
@@ -1355,7 +1353,6 @@ static int uninstall(void) {
   HKEY k;
   if (RegOpenKeyExW(HKEY_CURRENT_USER, RUN_KEY, 0, KEY_SET_VALUE, &k) == ERROR_SUCCESS) {
     RegDeleteValueW(k, RUN_NAME);
-    RegDeleteValueW(k, OLD_RUN_NAME);
     RegCloseKey(k);
   }
   link(CSIDL_DESKTOPDIRECTORY, 0);

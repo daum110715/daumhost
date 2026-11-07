@@ -4,7 +4,7 @@ English | [中文](README.zh-CN.md)
 
 Render Station lets agents running on a server hand heavy jobs to another computer, currently a Windows machine. The machine that runs the jobs connects to the server through a reverse SSH tunnel, so it needs no public IP address and no open inbound port.
 
-The name comes from its first use: rendering a promotional video for qiqi.help. The station's own window and messages are in Chinese.
+The name comes from its first use, rendering; it takes any heavy job from any project. The station's own window and messages are in Chinese.
 
 ## Terms
 
@@ -59,10 +59,6 @@ A checkout of this repository also runs as it is: clone it, run `npm install` in
 ### Server
 
 Clone this repository and run `npm link` in it. This installs the commands `render-station` and `rs` (see "Command line"); without it, run `node cli.mjs` from the checkout instead.
-
-### Migrating from the old location
-
-The station used to live in qiqi.help's `promo/remote/`. Running the installer migrates it: the installer closes the old instance and, while the new copy has no settings, copies the old checkout's `.tools\remote\config.json`, so the server address, the Shell allowlist and the other settings carry over. The old `PROMO_*` settings are imported when the qiqi.help checkout is registered as a workspace (see "Workspaces"). The new instance recreates the shortcuts and the autostart entry and removes the old autostart entry. The old `%LOCALAPPDATA%\qiqi-render-station\` folder can be deleted by hand.
 
 ## Configuration
 
@@ -131,8 +127,6 @@ The `render-station.json` file in a workspace's root declares the settings the w
 }
 ```
 
-The `render-station.json` at the root of the qiqi.help repository is a real-world example.
-
 The top-level `parallel` (1–16, default 1) sets how many of the workspace's preset jobs may run at once. Raise it only when they cannot contend for the same files.
 
 ### `env`: required settings
@@ -163,6 +157,10 @@ The top-level `parallel` (1–16, default 1) sets how many of the workspace's pr
 
 `command`, `cwd`, `env` and `collect` may use two placeholders: `{job}`, the job folder (`.tools/remote/jobs/<number>/` on the device, one per job, removed when it ends), and `{workspace}`, the workspace's path.
 
+### The general workspace `common`
+
+A project needs no workspace of its own to use the machine: `rs run --src <dir> --out <dir> common/node [args…]` brings that folder, runs its `main.mjs` and fetches what it writes in `out/`. For a browser, copy `kit/chrome.mjs` next to the script (headless Chrome or Edge over CDP). The workspace file is `kit/render-station.json`: put it in the folder `rs ws add common F:/project/common --create` makes. Do not borrow another project's presets.
+
 ## Using the station
 
 ### Tray icon
@@ -190,7 +188,7 @@ The window is `station.html` in WebView2, without a system title bar; the minimi
 
 The same page is available in a browser at `http://127.0.0.1:7799`; append `#gallery`, `#feed`, `#connection`, `#workspaces`, `#access`, `#machine` or `#about` to open a page directly; `#settings` opens Connection.
 
-Lines of the form `frame 12/300` in a job's output are read as progress: shown on the Overview page's progress strip while one job runs, and in the Running list while several do.
+Lines of the form `progress 12/300` in a job's output are read as progress: shown on the Overview page's progress strip while one job runs, and in the Running list while several do.
 
 ### State and logs
 
