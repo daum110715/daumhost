@@ -2,7 +2,7 @@
 
 [English](cli.md) | 中文
 
-`daumhost`（旧名 `daumhost`、`render-station` 仍可用）是服务器上的命令行工具，用于向设备提交任务和管理设备上的工作区，简称 `daumhost`。服务器、设备、工作区、预设任务等术语，以及设备的安装和配置，见 [README](../README.zh-CN.md)。
+`daumhost` 是服务器上的命令行工具，用于向设备提交任务和管理设备上的工作区，简称 `daumhost`。服务器、设备、工作区、预设任务等术语，以及设备的安装和配置，见 [README](../README.zh-CN.md)。
 
 ## 安装
 
@@ -12,7 +12,7 @@
 npm link
 ```
 
-该命令把 `daumhost`、`render-station` 和 `daumhost` 两个命令安装到 npm 的全局 `bin` 目录，该目录须在 `PATH` 中。命令始终指向这份克隆，`git pull` 后命令随之更新。不执行 `npm link` 时，可改用 `node /path/to/render-station/cli.mjs`，用法相同。
+该命令把 `daumhost`、`daumhost` 和 `daumhost` 两个命令安装到 npm 的全局 `bin` 目录，该目录须在 `PATH` 中。命令始终指向这份克隆，`git pull` 后命令随之更新。不执行 `npm link` 时，可改用 `node /path/to/daumhost/cli.mjs`，用法相同。
 
 ## 命令一览
 
@@ -33,7 +33,7 @@ npm link
 - `-h`、`--help`：显示该命令的说明，与 `daumhost help <命令>` 相同。
 - 选项位置：`run` 和 `shell` 的选项必须写在预设任务或命令之前，因为其后的内容会作为参数或命令原样传递。其他命令的选项可以写在任意位置。`--` 表示选项到此结束。
 - 过程提示（例如任务在队列中的位置、正在等待审批）输出到标准错误；加 `--json` 时不输出。
-- 命令通过隧道连接设备，依次尝试服务器的 7700–7709 端口，使用第一个有 daumhost 响应的端口。设置环境变量 `RENDER_STATION_PORT` 时只使用该端口。
+- 命令通过隧道连接设备，依次尝试服务器的 7700–7709 端口，使用第一个有 daumhost 响应的端口。设置环境变量 `DAUMHOST_PORT` 时只使用该端口。
 - 设备上的路径须写完整路径。可以用正斜杠，例如 `F:/projects/site`；使用反斜杠时须加引号，例如 `'F:\projects\site'`。
 
 ## status
@@ -80,7 +80,7 @@ daumhost run [--src <目录>] [--out <目录>] [--json] <工作区>/<预设任�
 
 - `<工作区>/<预设任务>` 之后的全部内容作为预设任务的参数。预设不接受的参数会被设备拒绝。
 - `--src`：按预设的 `upload` 收集文件的目录，默认为当前目录。上传总量不超过 48 MB。
-- `--out`：传回的文件保存的目录，默认为 render-station 仓库中的 `.tools/results/<时间>/`。传回总量不超过 128 MB。
+- `--out`：传回的文件保存的目录，默认为 daumhost 仓库中的 `.tools/results/<时间>/`。传回总量不超过 128 MB。
 - 设备上运行的任务数已达上限时，任务进入队列，命令会提示前面还有几个任务。中断命令或连接断开时，任务被取消，无论是在排队还是正在运行。
 - 命令输出任务的最后 20 行输出、传回文件的路径和耗时。
 
@@ -182,7 +182,7 @@ daumhost clip ls [--json]
 daumhost clip set [<文字…>] [--file <路径>] [--json]
 ```
 
-设备上开启「同步剪贴板」后，在设备上复制的文字和图片会自动写入服务器的 `~/.render-station/clipboard/`，见 README 的「剪贴板同步」。`daumhost clip` 和 `xclip` 会在该账号的主目录和（与之不同时）`$HOME` 里都找，读最后到的那一份。
+设备上开启「同步剪贴板」后，在设备上复制的文字和图片会自动写入服务器的 `~/.daumhost/clipboard/`，见 README 的「剪贴板同步」。`daumhost clip` 和 `xclip` 会在该账号的主目录和（与之不同时）`$HOME` 里都找，读最后到的那一份。
 
 - `daumhost clip`：输出最新的一份。文字原样输出；图片输出其 PNG 文件的路径。
 - `daumhost clip ls`：列出最近 50 份，从新到旧，包括时间、类型、大小、路径和文字的开头。

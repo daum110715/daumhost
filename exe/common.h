@@ -1,31 +1,39 @@
-// What 渲染站.exe (station.c) and its installer (setup.c) share: the names Windows knows the station
-// by, having a running station quit, and removing a folder with all in it.
-#define TRAY_CLASS L"RenderStation"
-#define TRAY_MUTEX L"Local\\render-station-tray"
+// What daumhost.exe (daumhost.c) and its installer (setup.c) share: the names Windows knows daumhost
+// by, having a running daumhost quit, and removing a folder with all in it.
+#define TRAY_CLASS L"DaumHost"
+#define TRAY_MUTEX L"Local\\daumhost-tray"
 #define RUN_KEY L"Software\\Microsoft\\Windows\\CurrentVersion\\Run"
-#define RUN_NAME L"渲染站"
-#define UNINSTALL_KEY L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\render-station"
-#define LINK_NAME L"渲染站.lnk"
-// the tray menu's 退出渲染站, as both stations number it
+#define RUN_NAME L"daumhost"
+#define UNINSTALL_KEY L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\daumhost"
+#define LINK_NAME L"daumhost.lnk"
+// the tray menu's 退出 daumhost, as both daumhosts number it
 #define TRAY_QUIT 6
 
-/** whether a station runs (one running as administrator lets this see it is
+/** whether a daumhost runs (one running as administrator lets this see it is
  *  there, but no more) */
-static inline int stationRunning(void) {
-  HANDLE m = OpenMutexW(SYNCHRONIZE, FALSE, TRAY_MUTEX);
-  if (m) {
-    CloseHandle(m);
-    return 1;
+static inline int daumhostRunning(void) {
+  // (for 0.8.0 only, which replaces the install under the old name: that one's too)
+  const wchar_t *names[] = { TRAY_MUTEX, L"Local\\render-station-tray" };
+  for (int i = 0; i < 2; i++) {
+    HANDLE m = OpenMutexW(SYNCHRONIZE, FALSE, names[i]);
+    if (m) {
+      CloseHandle(m);
+      return 1;
+    }
+    if (GetLastError() == ERROR_ACCESS_DENIED) return 1;
   }
-  return GetLastError() == ERROR_ACCESS_DENIED;
+  return 0;
 }
-/** the running station asked to quit, as its tray menu would (it asks first if a job is running):
+/** the running daumhost asked to quit, as its tray menu would (it asks first if a job is running):
  *  1 once none runs, within 20 s */
-static inline int stopStation(void) {
-  HWND w = FindWindowW(TRAY_CLASS, NULL);
-  if (w) PostMessageW(w, WM_COMMAND, TRAY_QUIT, 0);
+static inline int stopDaumhost(void) {
+  const wchar_t *classes[] = { TRAY_CLASS, L"RenderStation" };
+  for (int i = 0; i < 2; i++) {
+    HWND w = FindWindowW(classes[i], NULL);
+    if (w) PostMessageW(w, WM_COMMAND, TRAY_QUIT, 0);
+  }
   for (int t = 0; t < 200; t++) {
-    if (!stationRunning()) {
+    if (!daumhostRunning()) {
       // what it ran, node and ssh, ends with it a moment later
       Sleep(1000);
       return 1;

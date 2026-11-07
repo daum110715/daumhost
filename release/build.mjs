@@ -1,5 +1,5 @@
 // Puts a release together, into .tools/release/out/: everything an installed copy holds (the
-// station's files as committed, the window's fonts with their licenses, Node.js for Windows with its
+// daumhost's files as committed, the window's fonts with their licenses, Node.js for Windows with its
 // license), the manifest listing each with its size and SHA-256 signed with the release key
 // (.tools/release/key.pem, whose public half is update.mjs's KEY), the files as files/<sha256>.gz for
 // updates, and the installer: exe/setup.c's program with the release appended as a gzipped tar.
@@ -19,14 +19,14 @@ const tools = join(repo, '.tools/release');
 const out = join(tools, 'out');
 /** the Node.js an installed copy runs: an LTS release */
 const NODE = 'v24.22.1';
-/** the station's own files (render-station.json and exe/compile.mjs: its own folder, registered as a
- *  workspace, compiles 渲染站.exe; exe/build.mjs) */
-const APP = ['station.mjs', 'worker.mjs', 'shell.mjs', 'workspace.mjs', 'update.mjs', 'cli.mjs', 'station.html', '渲染站.exe', 'WebView2Loader.dll', 'render-station.json', 'exe/compile.mjs', 'LICENSE', 'README.md', 'README.zh-CN.md'];
+/** daumhost's own files (daumhost.json and exe/compile.mjs: its own folder, registered as a
+ *  workspace, compiles daumhost.exe; exe/build.mjs) */
+const APP = ['daumhost.mjs', 'worker.mjs', 'shell.mjs', 'workspace.mjs', 'update.mjs', 'cli.mjs', 'daumhost.html', 'daumhost.exe', 'WebView2Loader.dll', 'daumhost.json', 'exe/compile.mjs', 'LICENSE', 'README.md', 'README.zh-CN.md'];
 
 const sha256 = (data) => createHash('sha256').update(data).digest('hex');
 const git = (args) => execFileSync('git', args, { cwd: repo, encoding: 'utf8' });
 
-// ——— built from what is committed, and signed with the key stations check against ———
+// ——— built from what is committed, and signed with the key daumhosts check against ———
 const version = JSON.parse(readFileSync(join(repo, 'package.json'), 'utf8')).version;
 if (!process.argv.includes('--dirty') && git(['status', '--porcelain', '--untracked-files=no']).trim()) {
   console.error('uncommitted changes: commit them first, or build with --dirty');
@@ -77,7 +77,7 @@ async function node() {
   return { 'node/node.exe': file(`${base}/node.exe`), 'node/LICENSE': file(`${base}/LICENSE`) };
 }
 
-/** the fonts the window loads (station.mjs serves them from node_modules), and their licenses */
+/** the fonts the window loads (daumhost.mjs serves them from node_modules), and their licenses */
 function fonts() {
   const lxgw = 'node_modules/lxgw-wenkai-webfont';
   const outfit = 'node_modules/@fontsource-variable/outfit';
@@ -132,16 +132,16 @@ function tar(files, mtime) {
 // ——— the release: the files, the signed manifest, each file for updates ———
 const files = { ...Object.fromEntries(APP.map((p) => [p, readFileSync(join(repo, p))])), ...fonts(), ...(await node()) };
 const published = new Date();
-const setup = `render-station-setup-${version}.exe`;
+const setup = `daumhost-setup-${version}.exe`;
 const manifest = JSON.stringify({
-  name: 'render-station',
+  name: 'daumhost',
   version,
   published: published.toISOString(),
   files: Object.fromEntries(Object.entries(files).map(([path, data]) => [path, { sha256: sha256(data), size: data.length }])),
   setup,
 });
 const text = `${JSON.stringify({ manifest, signature: sign(null, Buffer.from(manifest), key).toString('base64') })}\n`;
-// as a station reads it
+// as a daumhost reads it
 openRelease(text);
 mkdirSync(join(out, 'files'), { recursive: true });
 for (const data of Object.values(files)) {

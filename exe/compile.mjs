@@ -1,9 +1,9 @@
-// Compiles 渲染站.exe and the installer's program (setup.exe) with mingw-w64, from a folder
+// Compiles daumhost.exe and the installer's program (setup.exe) with mingw-w64, from a folder
 // exe/build.mjs has put together (the sources, the resources, the icons it drew, WebView2Loader.dll,
 // and in sdk/ WebView2.h), into its out/ with the loader beside them. On Linux with the cross compilers
 // (x86_64-w64-mingw32-gcc and -windres); on Windows with those in the bin folder MINGW names (as
-// w64devkit has them: gcc.exe and windres.exe), which is how the render-station workspace's preset
-// `exe` runs it on the device (render-station.json): one copy of the flags, wherever it compiles.
+// w64devkit has them: gcc.exe and windres.exe), which is how daumhost workspace's preset
+// `exe` runs it on the device (daumhost.json): one copy of the flags, wherever it compiles.
 // usage: node exe/compile.mjs <folder> [--setup]   (--setup: the installer's program alone)
 import { execFileSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
@@ -27,13 +27,13 @@ const run = (name, args) => execFileSync(tool(name), args, { cwd: dir, env, stdi
 
 const flags = ['-O2', '-s', '-Wall', '-municode', '-mwindows', '-static-libgcc'];
 if (!setupOnly) {
-  run('windres', ['-c', '65001', '-i', 'station.rc', '-O', 'coff', '-o', 'station.res.o']);
+  run('windres', ['-c', '65001', '-i', 'daumhost.rc', '-O', 'coff', '-o', 'daumhost.res.o']);
   // the SDK's headers (in sdk/) as a system's: its IIDs, defined in the header, are not ours to be
   // warned about; and on Linux, shim/'s EventToken.h for the eventtoken.h mingw-w64 has
   const shim = existsSync(join(dir, 'shim')) ? ['-isystem', join(dir, 'shim')] : [];
-  run('gcc', [...flags, '-isystem', join(dir, 'sdk'), ...shim, '-o', join(out, '渲染站.exe'), 'station.c', 'station.res.o', '-lws2_32', '-lole32', '-luuid', '-lshell32', '-ladvapi32', '-ldwmapi', '-lcomctl32']);
+  run('gcc', [...flags, '-isystem', join(dir, 'sdk'), ...shim, '-o', join(out, 'daumhost.exe'), 'daumhost.c', 'daumhost.res.o', '-lws2_32', '-lole32', '-luuid', '-lshell32', '-ladvapi32', '-ldwmapi', '-lcomctl32']);
   copyFileSync(join(dir, 'WebView2Loader.dll'), join(out, 'WebView2Loader.dll'));
 }
 run('windres', ['-c', '65001', '-i', 'setup.rc', '-O', 'coff', '-o', 'setup.res.o']);
 run('gcc', [...flags, '-o', join(out, 'setup.exe'), 'setup.c', 'setup.res.o', '-lshell32', '-ladvapi32', '-lcomctl32']);
-console.log(`compiled${win ? '' : ' with the cross compilers'}: ${setupOnly ? 'setup.exe' : '渲染站.exe, setup.exe'}`);
+console.log(`compiled${win ? '' : ' with the cross compilers'}: ${setupOnly ? 'setup.exe' : 'daumhost.exe, setup.exe'}`);

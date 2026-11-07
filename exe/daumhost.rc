@@ -1,5 +1,5 @@
-// 渲染站.exe's resources: its icon (the first, as Explorer shows it), the tray's icons by state
-// (station.c numbers them), the manifest and the name Windows shows for it. The .ico files are
+// daumhost.exe's resources: its icon (the first, as Explorer shows it), the tray's icons by state
+// (daumhost.c numbers them), the manifest and the name Windows shows for it. The .ico files are
 // drawn by build.mjs.
 #include <windows.h>
 
@@ -9,7 +9,7 @@
 4 ICON "bad.ico"
 5 ICON "off.ico"
 
-1 24 "station.manifest"
+1 24 "daumhost.manifest"
 
 1 VERSIONINFO
 FILEVERSION 1,0,0,0
@@ -24,7 +24,7 @@ BEGIN
       VALUE "FileDescription", "daumhost"
       VALUE "ProductName", "daumhost"
       VALUE "FileVersion", "1.0"
-      VALUE "OriginalFilename", "渲染站.exe"
+      VALUE "OriginalFilename", "daumhost.exe"
     END
   END
   BLOCK "VarFileInfo"

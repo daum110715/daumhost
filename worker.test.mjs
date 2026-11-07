@@ -165,7 +165,7 @@ test('cli.mjs run --json hands a preset over and writes back what it made', asyn
     const out = join(f.base, 'results');
     const run = (args) =>
       new Promise((done) =>
-        execFile(process.execPath, [join(repo, 'cli.mjs'), ...args], { env: { ...process.env, RENDER_STATION_PORT: String(f.server.address().port) } }, (e, stdout) => done({ code: e?.code ?? 0, json: JSON.parse(stdout) })),
+        execFile(process.execPath, [join(repo, 'cli.mjs'), ...args], { env: { ...process.env, DAUMHOST_PORT: String(f.server.address().port) } }, (e, stdout) => done({ code: e?.code ?? 0, json: JSON.parse(stdout) })),
       );
     const status = await run(['status', '--json']);
     assert.equal(status.code, 0);
@@ -208,10 +208,10 @@ test('jobs past the limit wait their turn, as do a workspace\'s past its paralle
   } finally { f.close(); }
 });
 
-test('a change to the workspaces is checked, and a workspace added takes an old station\'s settings', () => {
+test('a change to the workspaces is checked, and a workspace added takes an old daumhost\'s settings', () => {
   const f = fixture();
   try {
-    // a checkout a station from before workspaces ran from
+    // a checkout a daumhost from before workspaces ran from
     mkdirSync(join(f.workspace, '.tools/remote'), { recursive: true });
     writeFileSync(join(f.workspace, '.tools/remote/config.json'), JSON.stringify({ env: { DEMO_NEED: 'kept', OTHER: 'not asked for' } }));
     const added = changeWorkspaces([], { action: 'add', name: 'mine', path: f.workspace, env: { EXTRA: '1' } });
@@ -264,7 +264,7 @@ test('a folder is listed by names, sizes and times, folders first', () => {
   } finally { f.close(); }
 });
 
-test('cli.mjs workspace hands a change over, as far as the station lets it', async () => {
+test('cli.mjs workspace hands a change over, as far as daumhost lets it', async () => {
   const asked = [];
   const manage = { mode: () => 'allow', change: async (input) => (asked.push(input), { action: input.action, workspace: { name: input.name, path: input.path, missing: [], presets: ['make'] }, imported: [] }) };
   const f = fixture({ manage });
@@ -272,7 +272,7 @@ test('cli.mjs workspace hands a change over, as far as the station lets it', asy
     await f.ready;
     const cli = (args) =>
       new Promise((done) =>
-        execFile(process.execPath, [join(repo, 'cli.mjs'), ...args], { env: { ...process.env, RENDER_STATION_PORT: String(f.server.address().port) } }, (e, stdout) => done({ code: e?.code ?? 0, json: JSON.parse(stdout) })),
+        execFile(process.execPath, [join(repo, 'cli.mjs'), ...args], { env: { ...process.env, DAUMHOST_PORT: String(f.server.address().port) } }, (e, stdout) => done({ code: e?.code ?? 0, json: JSON.parse(stdout) })),
       );
     const added = await cli(['workspace', 'add', 'mine', 'D:/sites/mine', '--env', 'A=1', '--env', 'B=x=y', '--json']);
     assert.equal(added.code, 0);
@@ -297,7 +297,7 @@ test('cli.mjs ls says when it waits for approval; presets, ws and help say what 
     await f.ready;
     const cli = (args) =>
       new Promise((done) =>
-        execFile(process.execPath, [join(repo, 'cli.mjs'), ...args], { env: { ...process.env, RENDER_STATION_PORT: String(f.server.address().port) } }, (e, stdout, stderr) => done({ code: e?.code ?? 0, stdout, stderr })),
+        execFile(process.execPath, [join(repo, 'cli.mjs'), ...args], { env: { ...process.env, DAUMHOST_PORT: String(f.server.address().port) } }, (e, stdout, stderr) => done({ code: e?.code ?? 0, stdout, stderr })),
       );
     const said = await cli(['ls', 'F:/']);
     assert.equal(said.code, 0);
@@ -309,8 +309,8 @@ test('cli.mjs ls says when it waits for approval; presets, ws and help say what 
     assert.deepEqual(presets.presets.map((p) => p.name), ['make', 'nap']);
     assert.equal((await cli(['presets', 'nothing'])).code, 1);
     assert.deepEqual(JSON.parse((await cli(['ws', '--json'])).stdout).workspaces.map((w) => w.name), ['demo']);
-    assert.match((await cli(['help', 'ls'])).stdout, /^usage: rs ls/);
-    assert.match((await cli(['sh', '--help'])).stdout, /^usage: rs shell/);
+    assert.match((await cli(['help', 'ls'])).stdout, /^usage: daumhost ls/);
+    assert.match((await cli(['sh', '--help'])).stdout, /^usage: daumhost shell/);
     assert.equal((await cli(['nothing'])).code, 2);
   } finally { f.close(); }
 });
@@ -323,7 +323,7 @@ test('cli.mjs clip puts text or a picture on the device\'s clipboard, and reads 
     await f.ready;
     const cli = (args, input) =>
       new Promise((done) => {
-        const p = execFile(process.execPath, [join(repo, 'cli.mjs'), ...args], { env: { ...process.env, HOME: f.base, RENDER_STATION_HOMES: f.base, RENDER_STATION_PORT: String(f.server.address().port) } }, (e, stdout, stderr) => done({ code: e?.code ?? 0, stdout, stderr }));
+        const p = execFile(process.execPath, [join(repo, 'cli.mjs'), ...args], { env: { ...process.env, HOME: f.base, DAUMHOST_HOMES: f.base, DAUMHOST_PORT: String(f.server.address().port) } }, (e, stdout, stderr) => done({ code: e?.code ?? 0, stdout, stderr }));
         p.stdin.end(input);
       });
     assert.equal((await cli(['clip', 'set', 'hello', 'there'])).code, 0);
@@ -342,7 +342,7 @@ test('cli.mjs clip puts text or a picture on the device\'s clipboard, and reads 
     // what came from the device: no worker needed
     const none = await cli(['clip']);
     assert.equal(none.code, 1);
-    const dir = join(f.base, '.render-station/clipboard');
+    const dir = join(f.base, '.daumhost/clipboard');
     mkdirSync(join(dir, 'history'), { recursive: true });
     writeFileSync(join(dir, 'history/20261023-120000-1.txt'), 'copied there');
     writeFileSync(join(dir, 'latest.txt'), 'copied there');
@@ -356,7 +356,7 @@ test('cli.mjs clip puts text or a picture on the device\'s clipboard, and reads 
     symlinkSync(join(repo, 'cli.mjs'), link);
     const xclip = (args, input) =>
       new Promise((done) => {
-        const p = execFile(process.execPath, [link, ...args], { encoding: 'buffer', env: { ...process.env, HOME: f.base, RENDER_STATION_HOMES: f.base, RENDER_STATION_PORT: String(f.server.address().port) } }, (e, stdout) => done({ code: e?.code ?? 0, stdout }));
+        const p = execFile(process.execPath, [link, ...args], { encoding: 'buffer', env: { ...process.env, HOME: f.base, DAUMHOST_HOMES: f.base, DAUMHOST_PORT: String(f.server.address().port) } }, (e, stdout) => done({ code: e?.code ?? 0, stdout }));
         p.stdin.end(input);
       });
     assert.match((await xclip(['-selection', 'clipboard', '-t', 'TARGETS', '-o'])).stdout.toString(), /UTF8_STRING/);
@@ -373,14 +373,14 @@ test('cli.mjs clip puts text or a picture on the device\'s clipboard, and reads 
     // looked in, and what came last is read (a stale picture in the one must not hide a new one in the other)
     const other = join(f.base, 'passwd-home');
     const stale = Buffer.from('stale picture');
-    mkdirSync(join(other, '.render-station/clipboard'), { recursive: true });
-    writeFileSync(join(other, '.render-station/clipboard/latest.png'), stale);
-    utimesSync(join(other, '.render-station/clipboard/latest.png'), new Date(Date.now() - 60000), new Date(Date.now() - 60000));
+    mkdirSync(join(other, '.daumhost/clipboard'), { recursive: true });
+    writeFileSync(join(other, '.daumhost/clipboard/latest.png'), stale);
+    utimesSync(join(other, '.daumhost/clipboard/latest.png'), new Date(Date.now() - 60000), new Date(Date.now() - 60000));
     writeFileSync(join(dir, 'latest.png'), png);
     const both = (args) =>
-      new Promise((done) => execFile(process.execPath, [link, ...args], { encoding: 'buffer', env: { ...process.env, HOME: f.base, RENDER_STATION_HOMES: `${other}${delimiter}${f.base}`, RENDER_STATION_PORT: String(f.server.address().port) } }, (e, stdout) => done({ code: e?.code ?? 0, stdout })));
+      new Promise((done) => execFile(process.execPath, [link, ...args], { encoding: 'buffer', env: { ...process.env, HOME: f.base, DAUMHOST_HOMES: `${other}${delimiter}${f.base}`, DAUMHOST_PORT: String(f.server.address().port) } }, (e, stdout) => done({ code: e?.code ?? 0, stdout })));
     assert.deepEqual((await both(['-selection', 'clipboard', '-t', 'image/png', '-o'])).stdout, png);
-    utimesSync(join(other, '.render-station/clipboard/latest.png'), new Date(), new Date());
+    utimesSync(join(other, '.daumhost/clipboard/latest.png'), new Date(), new Date());
     assert.deepEqual((await both(['-selection', 'clipboard', '-t', 'image/png', '-o'])).stdout, stale);
   } finally { f.close(); }
 });

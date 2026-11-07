@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // On the server: hands jobs to the worker on the machine that does the heavy work (worker.mjs, kept
 // up there by daumhost, with the reverse SSH tunnel it opens to here; it comes in on a
-// port from 7700 to 7709, or the one RENDER_STATION_PORT names). Installed as `render-station` and
+// port from 7700 to 7709, or the one DAUMHOST_PORT names). Installed as `daumhost` and
 // `daumhost` (npm link); `daumhost help` says what each command does, docs/cli.md says it at length.
 // --json: one JSON object on stdout, the end of it all ({ ok, …, error }).
 // Exit status: the job's own when it ran; 1 when it failed without running, or a request was
@@ -33,7 +33,7 @@ const COMMANDS = {
   help: { takes: [], anywhere: true },
 };
 const HELP = {
-  '': `daumhost (also: rs, render-station) hands heavy jobs from this server to another machine, and looks after the
+  '': `daumhost hands heavy jobs from this server to another machine, and looks after the
 workspaces there.
 
 usage: daumhost <command> [options]
@@ -52,8 +52,8 @@ Every command takes --json: then it prints one JSON object, its result, and noth
 Exit status: 0 when done; when a job ran and failed, the job's own; 1 when it failed without
 running, or a request was refused; 2 for a usage error; 3 when the device is not reached, is paused,
 or has too many jobs waiting.
-The device is reached through the tunnel on ports 7700-7709 here, or the port RENDER_STATION_PORT
-names. The manual: docs/cli.md in the render-station repository.`,
+The device is reached through the tunnel on ports 7700-7709 here, or the port DAUMHOST_PORT
+names. The manual: docs/cli.md in daumhost repository.`,
   status: `usage: daumhost status [--json]
 
 Whether daumhost on the device is reached; how many jobs run and wait there and how many
@@ -72,7 +72,7 @@ Runs a preset of a workspace on the device and waits for it to end. Everything a
 
   --src <dir>   where the files the preset brings are taken from (default: the current folder)
   --out <dir>   where what the job makes is written (default: .tools/results/<time>/ in the
-                render-station folder)
+                daumhost folder)
 
 When the device is busy, the job waits its turn and the command says how many jobs are ahead.
 Interrupting the command cancels the job, waiting or running.
@@ -100,7 +100,7 @@ on the device, or is made at once, as they chose.
 
   <path>           a full path on the device: F:/projects/site, or quoted, 'F:\\projects\\site'
   --create         make the folder if it is not there yet
-  --env NAME=value a setting of the workspace (its render-station.json names them); given more
+  --env NAME=value a setting of the workspace (its daumhost.json names them); given more
                    than once for more than one
   --unset NAME     clear a setting
 
@@ -127,7 +127,7 @@ examples: daumhost ls
 
 The device's clipboard, while its owner has 同步剪贴板 (clipboard sync) on in daumhost's
 settings there. What is copied on the device comes here by itself, within a second or so (or once
-the device connects again), into ~/.render-station/clipboard/. daumhost clip prints the newest, or for a
+the device connects again), into ~/.daumhost/clipboard/. daumhost clip prints the newest, or for a
 picture the path of its PNG; daumhost clip ls lists the last 50. Both read what is here and do not need
 the device.
 
@@ -150,12 +150,12 @@ What the commands do, or what one does.`,
 
 // ——— by the name xclip (a link to this): the clipboard of this server, as programs here ask it with
 // xclip (Claude Code, for a picture to paste), is the device's. Read, it is what came from there
-// (in ~/.render-station/clipboard/); written, it goes there as daumhost clip set puts it ———
+// (in ~/.daumhost/clipboard/); written, it goes there as daumhost clip set puts it ———
 // The device pushes over ssh, which lands in the account's own home, the one the password file names;
 // a program here can run with another HOME (a login that set it, an account whose home was moved). So
 // the clipboard is looked for in both, and what came last wins.
-// (RENDER_STATION_HOMES, a list of folders, names them instead: for the tests.)
-const CLIP_DIRS = [...new Set(process.env.RENDER_STATION_HOMES ? process.env.RENDER_STATION_HOMES.split(delimiter) : [homedir(), userInfo().homedir])].map((home) => join(home, '.render-station/clipboard'));
+// (DAUMHOST_HOMES, a list of folders, names them instead: for the tests.)
+const CLIP_DIRS = [...new Set(process.env.DAUMHOST_HOMES ? process.env.DAUMHOST_HOMES.split(delimiter) : [homedir(), userInfo().homedir])].map((home) => join(home, '.daumhost/clipboard'));
 const CLIP_DIR = CLIP_DIRS[0];
 /** the newest file of this name in any of the clipboard folders, or null */
 const clipFind = (name) => CLIP_DIRS.map((d) => join(d, name)).filter((f) => existsSync(f)).sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0] ?? null;
@@ -263,7 +263,8 @@ if (opts.help || what === 'help') {
 const tell = (text) => opts.json || console.error(text);
 
 // ——— the worker ———
-const headers = { [HEADER]: String(PROTOCOL) };
+// (the second for a device still on a release under the old name, until 0.8.0 is in)
+const headers = { [HEADER]: String(PROTOCOL), 'x-render-station': String(PROTOCOL) };
 /** a request to the worker on `port`: the reply's status and body */
 const call = (port, method, path, body, timeout = 0) =>
   new Promise((done, fail) => {
@@ -278,7 +279,7 @@ const call = (port, method, path, body, timeout = 0) =>
   });
 /** a request to the worker on `port` answered as it goes, a line of JSON each step (gzipped, for a
  *  job): each step told as it comes (`step(event)`), and at the end the reply's status and the last
- *  step's reply (or, refused, the body). A station from before it answered so sends the reply alone */
+ *  step's reply (or, refused, the body). A daumhost from before it answered so sends the reply alone */
 const stream = (port, path, body, extra, step) =>
   new Promise((done, fail) => {
     const req = request({ host: '127.0.0.1', port, path, method: 'POST', headers: { ...headers, 'content-type': 'application/json', accept: 'application/x-ndjson', ...extra } }, (res) => {
@@ -362,13 +363,13 @@ if (what === 'clip' && words[0] !== 'set') {
 // connection that died answers nothing)
 let port = null;
 let hello = null;
-for (const p of process.env.RENDER_STATION_PORT ? [Number(process.env.RENDER_STATION_PORT)] : PORTS) {
+for (const p of process.env.DAUMHOST_PORT ? [Number(process.env.DAUMHOST_PORT)] : PORTS) {
   const res = await call(p, 'GET', '/hello', null, 1500).catch(() => null);
   let said = null;
   try {
     said = res?.status === 200 ? JSON.parse(res.body) : null;
   } catch {}
-  if (said?.service === 'render-station') {
+  if (said?.service === 'daumhost' || said?.service === 'render-station') {
     port = p;
     hello = said;
     break;
@@ -389,7 +390,7 @@ if (what === 'status') {
 }
 if (hello && hello.protocol !== PROTOCOL) finish({ ok: false, error: MISMATCH() }, 1);
 if (!hello) finish({ ok: false, error: OFFLINE }, 3);
-/** refused, if the station on the device is older than what is asked of it */
+/** refused, if daumhost on the device is older than what is asked of it */
 const need = (feature, what) => (hello.features ?? []).includes(feature) || finish({ ok: false, error: `daumhost on the device is too old for ${what}: it updates itself, or check for updates in its settings` }, 1);
 
 function printWorkspaces() {

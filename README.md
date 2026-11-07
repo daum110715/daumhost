@@ -12,10 +12,10 @@ It takes any heavy job from any project. Its own window and messages are in Chin
 |---|---|
 | Server | The machine that runs the agents and submits jobs, usually Linux. |
 | Device | The Windows computer that runs daumhost and executes jobs. |
-| Station | The tray program `渲染站.exe` together with the background process `station.mjs`. It manages the worker, the tunnel and the settings window. |
+| Daumhost | The tray program `daumhost.exe` together with the background process `daumhost.mjs`. It manages the worker, the tunnel and the settings window. |
 | Worker | `worker.mjs`. It listens on the device's `127.0.0.1:7700` and executes jobs. |
 | Workspace | A folder registered on the device. Jobs run only in registered workspaces. |
-| Preset | A job defined in a workspace's `render-station.json`. The server can run it without approval each time. |
+| Preset | A job defined in a workspace's `daumhost.json`. The server can run it without approval each time. |
 
 ## How it works
 
@@ -47,18 +47,18 @@ Server: Node.js 18 or later and a checkout of this repository.
 
 ### Device
 
-1. Download the installer: <https://8.137.206.169/assets/render-station/render-station-setup.exe> (about 40 MB, Node.js included).
+1. Download the installer: <https://8.137.206.169/assets/daumhost/daumhost-setup.exe> (about 40 MB, Node.js included).
 2. Run it. The installer is not code-signed, so Windows may say "Windows protected your PC"; click "More info", then "Run anyway".
-3. Click 安装 (Install). daumhost is installed for the current user in `%LOCALAPPDATA%\Programs\render-station\`, without administrator rights; it then starts and creates daumhost shortcuts on the desktop and in the Start menu.
+3. Click 安装 (Install). daumhost is installed for the current user in `%LOCALAPPDATA%\Programs\daumhost\`, without administrator rights; it then starts and creates daumhost shortcuts on the desktop and in the Start menu.
 4. In the window's 设置 → 连接 (Settings → Connection) page, enter the server's SSH address and port; then register workspaces in 设置 → 工作区 (Settings → Workspaces). Changes are saved as they are made.
 
-The installer first closes a running station. Running a newer installer installs over the old copy and keeps the settings. To uninstall, find daumhost under Windows Settings → Apps → Installed apps and choose Uninstall; you can choose whether to keep the settings and the jobs' output.
+The installer first closes a running daumhost. Running a newer installer installs over the old copy and keeps the settings. To uninstall, find daumhost under Windows Settings → Apps → Installed apps and choose Uninstall; you can choose whether to keep the settings and the jobs' output.
 
-A checkout of this repository also runs as it is: clone it, run `npm install` in its root, and double-click `渲染站.exe`. This needs Node.js and Git on the device and updates through Git (see "Automatic updates"). `渲染站.exe` must stay in the same folder as `station.mjs`.
+A checkout of this repository also runs as it is: clone it, run `npm install` in its root, and double-click `daumhost.exe`. This needs Node.js and Git on the device and updates through Git (see "Automatic updates"). `daumhost.exe` must stay in the same folder as `daumhost.mjs`.
 
 ### Server
 
-Clone this repository and run `npm link` in it. This installs the commands `daumhost`, `render-station` and `daumhost` (see "Command line"); without it, run `node cli.mjs` from the checkout instead.
+Clone this repository and run `npm link` in it. This installs the commands `daumhost`, `daumhost` and `daumhost` (see "Command line"); without it, run `node cli.mjs` from the checkout instead.
 
 ## Configuration
 
@@ -81,7 +81,7 @@ In Settings → Workspaces. Each workspace is a block showing its name, its path
 
 An opened workspace lists its presets. A field is saved when you leave it, a switch when you flip it. 添加工作区 (Add workspace) takes a name and a path; 移除工作区 (Remove workspace) asks first and leaves the folder alone. daumhost rereads a workspace file when it changes; no restart is needed.
 
-When a workspace is added, in the Settings page or by the server, and its folder still holds an old station's `.tools\remote\config.json`, the settings there that the workspace file's `env` declares and that are not yet filled in are imported.
+When a workspace is added, in the Settings page or by the server, and its folder still holds an old daumhost's `.tools\remote\config.json`, the settings there that the workspace file's `env` declares and that are not yet filled in are imported.
 
 The server can also add, change and remove workspaces with `daumhost workspace`, as far as 服务器管理工作区 (Server manages workspaces) under Settings → Permissions and approvals allows (see "Command line").
 
@@ -106,7 +106,7 @@ These switches are on by default; turning one off undoes its effect:
 
 ## Workspace file
 
-The `render-station.json` file in a workspace's root declares the settings the workspace needs and the presets it offers. A workspace without this file can run Shell jobs only. Example:
+The `daumhost.json` file in a workspace's root declares the settings the workspace needs and the presets it offers. A workspace without this file can run Shell jobs only. Example:
 
 ```json
 {
@@ -159,7 +159,7 @@ The top-level `parallel` (1–16, default 1) sets how many of the workspace's pr
 
 ### The general workspace `common`
 
-A project needs no workspace of its own to use the machine: `daumhost run --src <dir> --out <dir> common/node [args…]` brings that folder, runs its `main.mjs` and fetches what it writes in `out/`. For a browser, copy `kit/chrome.mjs` next to the script (headless Chrome or Edge over CDP). The workspace file is `kit/render-station.json`: put it in the folder `daumhost ws add common F:/project/common --create` makes. Do not borrow another project's presets.
+A project needs no workspace of its own to use the machine: `daumhost run --src <dir> --out <dir> common/node [args…]` brings that folder, runs its `main.mjs` and fetches what it writes in `out/`. For a browser, copy `kit/chrome.mjs` next to the script (headless Chrome or Edge over CDP). The workspace file is `kit/daumhost.json`: put it in the folder `daumhost ws add common F:/project/common --create` makes. Do not borrow another project's presets.
 
 ## Using daumhost
 
@@ -179,7 +179,7 @@ Click the icon to open the window. The right-click menu has 打开 daumhost (Ope
 
 ### Window
 
-The window is `station.html` in WebView2, without a system title bar; the minimize, maximize and close buttons are at the page's top right. Drag the top of the page or an empty part of the sidebar to move the window; double-click there to maximize or restore it. The window opens where it was last, at its last size, maximized if it was. A closed window's page stays loaded in the background for 5 minutes, so opening it again within that time is instant. The sidebar has four items:
+The window is `daumhost.html` in WebView2, without a system title bar; the minimize, maximize and close buttons are at the page's top right. Drag the top of the page or an empty part of the sidebar to move the window; double-click there to maximize or restore it. The window opens where it was last, at its last size, maximized if it was. A closed window's page stays loaded in the background for 5 minutes, so opening it again within that time is instant. The sidebar has four items:
 
 - 总览 (Overview): the state with a progress strip, today's counts, the last two minutes of CPU, memory and GPU load, and the recent jobs with their output. While more than one job runs or waits, 运行中 (Running) lists each with its progress.
 - 输出 (Output): the files the jobs produced, kept on this device. Images and videos can be previewed (videos play on hover, click to enlarge, arrow keys to browse); other files open in their default program.
@@ -192,7 +192,7 @@ Lines of the form `progress 12/300` in a job's output are read as progress: show
 
 ### State and logs
 
-After the device wakes from sleep, loses the network, or the worker exits, daumhost reopens the tunnel and restarts the worker on its own. The log is `.tools/remote/station.log`; open it from the tray menu's 查看日志 (View log) or from Settings → Updates and about.
+After the device wakes from sleep, loses the network, or the worker exits, daumhost reopens the tunnel and restarts the worker on its own. The log is `.tools/remote/daumhost.log`; open it from the tray menu's 查看日志 (View log) or from Settings → Updates and about.
 
 While the tunnel is open, anyone who can log in to the server can run the device's presets. Pause daumhost (in the window or the tray menu) when it is not needed; pausing closes the tunnel.
 
@@ -249,13 +249,13 @@ daumhost refuses Shell jobs by default. Enable them on the device under 设置 �
 - Run as administrator, daumhost and everything it runs have administrator rights, so a preset or an approved command can change system settings and any file. Windows asks through User Account Control each time; turn off 以管理员身份运行 to stop it asking.
 - A pending command, workspace change or folder listing never takes effect after a denial, an approval timeout, or the submitter disconnecting.
 - Turning off Shell permissions or pausing refuses further jobs and cancels pending requests, waiting jobs and YOLO mode, but does not stop a command already running. When a command times out or its submitter disconnects, daumhost tries to end its process tree.
-- Mode changes, pending requests, manual decisions, executed commands, working directories, results, workspace changes and folders listed outside the workspaces are written to the device's `.tools/remote/station.log`.
+- Mode changes, pending requests, manual decisions, executed commands, working directories, results, workspace changes and folders listed outside the workspaces are written to the device's `.tools/remote/daumhost.log`.
 
 ## Clipboard sync
 
 With 同步剪贴板 (Sync clipboard) on in 设置 → 权限与审批 (Settings → Permissions and approvals), the device and the server share the clipboard:
 
-- Text and pictures copied on the device are written over SSH to `~/.render-station/clipboard/` on the server within about a second: the newest as `latest.txt` or `latest.png` (pictures always become PNG), the last 50 in `history/`. Of several copied in a row, only the last is sent; while the tunnel is down, the newest is sent once it is back. The folder is in the home of the account the device logs in as, the one the password file names; `daumhost` and `xclip` look there and in `$HOME` when that differs from it, and read what came last.
+- Text and pictures copied on the device are written over SSH to `~/.daumhost/clipboard/` on the server within about a second: the newest as `latest.txt` or `latest.png` (pictures always become PNG), the last 50 in `history/`. Of several copied in a row, only the last is sent; while the tunnel is down, the newest is sent once it is back. The folder is in the home of the account the device logs in as, the one the password file names; `daumhost` and `xclip` look there and in `$HOME` when that differs from it, and read what came last.
 - The server puts text or a picture on the device's clipboard with `daumhost clip set`; what it puts there is not sent back.
 - On the server, `daumhost clip` prints the newest (for a picture, its path) and `daumhost clip ls` lists the history. Both read the files on the server and do not need the device.
 - What a password manager or similar program marks as not to be recorded, and anything over 20 MB, is not synced.
@@ -270,9 +270,9 @@ daumhost clip set --file shot.png
 
 ## Automatic updates
 
-When enabled, daumhost checks one minute after starting and every 30 minutes after that; the 立即检查 (Check now) button in Settings → Updates and about checks immediately. While jobs run, wait or await approval, the update waits until all are over. When daumhost's own files change, it restarts itself; when `渲染站.exe` changes, the tray program replaces itself with the new version.
+When enabled, daumhost checks one minute after starting and every 30 minutes after that; the 立即检查 (Check now) button in Settings → Updates and about checks immediately. While jobs run, wait or await approval, the update waits until all are over. When daumhost's own files change, it restarts itself; when `daumhost.exe` changes, the tray program replaces itself with the new version.
 
-**A copy installed by the installer** takes new versions from the update server, `https://8.137.206.169/assets/render-station/`:
+**A copy installed by the installer** takes new versions from the update server, `https://8.137.206.169/assets/daumhost/`:
 
 - The server's `latest.json` lists every file of the newest version with its SHA-256 and carries an Ed25519 signature by the release key. daumhost accepts only a validly signed release with a higher version number.
 - Only changed files are downloaded (`files/<SHA-256>.gz`). Each is checked before any is put in place, and if one cannot be put in place, all are restored. Replaced files are first renamed `*.old` and deleted at the next start.
@@ -282,15 +282,15 @@ When enabled, daumhost checks one minute after starting and every 30 minutes aft
 
 ## Tray program
 
-`渲染站.exe`, built from `exe/station.c`:
+`daumhost.exe`, built from `exe/daumhost.c`:
 
-- When started, it copies itself and `WebView2Loader.dll` to `%LOCALAPPDATA%\render-station\` and runs from there, so the installed (or repository) exe is never locked and updates can replace it.
-- Starts `station.mjs` in the background and restarts it whenever it exits, with the installed folder's `node\node.exe` if there is one, else the system's Node.js.
+- When started, it copies itself and `WebView2Loader.dll` to `%LOCALAPPDATA%\daumhost\` and runs from there, so the installed (or repository) exe is never locked and updates can replace it.
+- Starts `daumhost.mjs` in the background and restarts it whenever it exits, with the installed folder's `node\node.exe` if there is one, else the system's Node.js.
 - Puts daumhost, ssh and the jobs' processes in one job object, so they all end when it quits.
 - Started without administrator rights, it asks for them through User Account Control (`runas`) and leaves the rest to the copy so started, unless `.tools\remote\no-elevate` exists (以管理员身份运行 turned off); if the answer is no, it goes on with normal rights. A restart after an update keeps the rights it had without asking again. Run as administrator, it still takes the messages of processes without those rights: a second start opening the window, the installer asking it to quit, and Explorer's.
-- The window's position, size and maximized state are kept in the registry under `HKCU\Software\render-station`; uninstalling removes them.
-- `渲染站.exe --uninstall` uninstalls a copy the installer installed; Windows' Installed apps runs it.
-- `渲染站.exe --try` is a trial: beside the running station, a new build's window on the same page, with a tray icon of its own to open the window again or end the trial. It starts no background process, changes neither autostart nor the shortcuts, and asks for no administrator rights; its log and WebView2 data are in `%LOCALAPPDATA%\render-station\try\`. Starting a trial again has the previous one quit first; a trial ends by itself 5 minutes after its window is closed.
+- The window's position, size and maximized state are kept in the registry under `HKCU\Software\daumhost`; uninstalling removes them.
+- `daumhost.exe --uninstall` uninstalls a copy the installer installed; Windows' Installed apps runs it.
+- `daumhost.exe --try` is a trial: beside the running daumhost, a new build's window on the same page, with a tray icon of its own to open the window again or end the trial. It starts no background process, changes neither autostart nor the shortcuts, and asks for no administrator rights; its log and WebView2 data are in `%LOCALAPPDATA%\daumhost\try\`. Starting a trial again has the previous one quit first; a trial ends by itself 5 minutes after its window is closed.
 
 ## Running without the tray program
 
@@ -312,17 +312,17 @@ Run this way, there is no approval interface, so only presets run, and the serve
 ## Development
 
 - Tests: `node --test`.
-- Build `渲染站.exe`: `node exe/build.mjs`. It gathers the sources, the resources, the icons and the WebView2 SDK's header and `WebView2Loader.dll` (the SDK is the NuGet package `Microsoft.Web.WebView2`, unpacked in `.tools/webview2/`) in `.tools/exe-build/`, and `exe/compile.mjs` compiles them into the repository root. It also builds the installer's program, `.tools/exe-build/setup.exe`.
-  - When the device is reached and set up for it, it compiles there, with the preset `render-station/exe`; otherwise here, with mingw-w64 (`x86_64-w64-mingw32-gcc`). `--local` always compiles here.
-  - Setting up the device: register daumhost's own installed folder as the workspace `render-station` (its `render-station.json` offers the preset) and set its `MINGW` to mingw-w64's `bin` folder, such as [w64devkit](https://github.com/skeeto/w64devkit)'s `w64devkit\bin`. The preset compiles what it is brought and runs none of it.
-  - `node exe/build.mjs --try`: compiled on the device, the new `渲染站.exe` is started there with `--try` by a Shell job, which the owner approves on the device.
-- After changing anything in `exe/`, rebuild and commit `渲染站.exe` together with the sources.
+- Build `daumhost.exe`: `node exe/build.mjs`. It gathers the sources, the resources, the icons and the WebView2 SDK's header and `WebView2Loader.dll` (the SDK is the NuGet package `Microsoft.Web.WebView2`, unpacked in `.tools/webview2/`) in `.tools/exe-build/`, and `exe/compile.mjs` compiles them into the repository root. It also builds the installer's program, `.tools/exe-build/setup.exe`.
+  - When the device is reached and set up for it, it compiles there, with the preset `daumhost/exe`; otherwise here, with mingw-w64 (`x86_64-w64-mingw32-gcc`). `--local` always compiles here.
+  - Setting up the device: register daumhost's own installed folder as the workspace `daumhost` (its `daumhost.json` offers the preset) and set its `MINGW` to mingw-w64's `bin` folder, such as [w64devkit](https://github.com/skeeto/w64devkit)'s `w64devkit\bin`. The preset compiles what it is brought and runs none of it.
+  - `node exe/build.mjs --try`: compiled on the device, the new `daumhost.exe` is started there with `--try` by a Shell job, which the owner approves on the device.
+- After changing anything in `exe/`, rebuild and commit `daumhost.exe` together with the sources.
 
 ### Releasing
 
 1. Set the version in `package.json` and commit everything.
 2. `node release/build.mjs` packs the committed files, the window's fonts and Node.js for Windows (`NODE` in `release/build.mjs`, downloaded from nodejs.org and checked on first use), and writes the signed `latest.json`, the update files `files/<SHA-256>.gz` and the installer to `.tools/release/out/`.
-3. `node release/publish.mjs` uploads them over `ssh lu1` to lu1's `/home/user1/apps/render-station/public/`: the files first, then the installer (with `render-station-setup.exe` made a link to it), then `latest.json`; it finally reads `latest.json` back from the public address to check it.
+3. `node release/publish.mjs` uploads them over `ssh lu1` to lu1's `/home/user1/apps/daumhost/public/`: the files first, then the installer (with `daumhost-setup.exe` made a link to it), then `latest.json`; it finally reads `latest.json` back from the public address to check it.
 
 The release key's private half is `.tools/release/key.pem`, outside version control; its public half is `KEY` in `update.mjs`. Back up the private key elsewhere: without it, installed copies cannot accept new versions and must be reinstalled.
 
@@ -330,22 +330,22 @@ The release key's private half is `.tools/release/key.pem`, outside version cont
 
 | Path | Description |
 |---|---|
-| `cli.mjs` | The command-line tool on the server, installed as `daumhost`, `render-station` and `daumhost`. |
+| `cli.mjs` | The command-line tool on the server, installed as `daumhost`, `daumhost` and `daumhost`. |
 | `docs/` | The command-line manual (`cli.md`, `cli.zh-CN.md`). |
 | `update.mjs` | Updates of an installed copy: checking a release's signature, and fetching, checking and replacing files. |
 | `worker.mjs` | The worker: receives jobs, queues and runs them and returns the results; passes on the server's workspace changes and folder listings. |
 | `workspace.mjs` | Reading and checking workspace files, globs, presets' commands and output, checking workspace changes, importing old settings, and listing folders. |
 | `shell.mjs` | Approval, allowlist and execution of Shell jobs, and the approval queue. |
-| `station.mjs` | daumhost's background process: manages the worker, the tunnel and the settings, and serves the window at `127.0.0.1:7799`. |
-| `station.html` | daumhost's window. |
-| `渲染站.exe` | The built tray program. |
+| `daumhost.mjs` | daumhost's background process: manages the worker, the tunnel and the settings, and serves the window at `127.0.0.1:7799`. |
+| `daumhost.html` | daumhost's window. |
+| `daumhost.exe` | The built tray program. |
 | `WebView2Loader.dll` | The WebView2 loader the tray program's window needs. |
-| `exe/` | The tray program's sources (`station.c`, `station.rc`, `station.manifest`), the installer's (`setup.c`, `setup.rc`), `common.h` shared by both, and the build scripts: `build.mjs` gathers the files and chooses where to compile, `compile.mjs` runs mingw-w64. |
-| `render-station.json` | daumhost's own workspace file: with its installed folder registered as a workspace, it offers the preset `exe`, which compiles `渲染站.exe` on the device. |
+| `exe/` | The tray program's sources (`daumhost.c`, `daumhost.rc`, `daumhost.manifest`), the installer's (`setup.c`, `setup.rc`), `common.h` shared by both, and the build scripts: `build.mjs` gathers the files and chooses where to compile, `compile.mjs` runs mingw-w64. |
+| `daumhost.json` | daumhost's own workspace file: with its installed folder registered as a workspace, it offers the preset `exe`, which compiles `daumhost.exe` on the device. |
 | `release/` | Release scripts: `build.mjs` packs and signs, `publish.mjs` uploads to the update server. |
 | `*.test.mjs` | Tests. |
 | `release.json` | Only in an installed copy: the signed manifest of its version. |
-| `.tools/` | Runtime data (`remote/config.json`, `remote/station.log`, `remote/no-elevate`, `remote/jobs/`, `remote/out/`, `results/`, `update/`), the WebView2 SDK (`webview2/`) and release files (`release/`); not under version control. |
+| `.tools/` | Runtime data (`remote/config.json`, `remote/daumhost.log`, `remote/no-elevate`, `remote/jobs/`, `remote/out/`, `results/`, `update/`), the WebView2 SDK (`webview2/`) and release files (`release/`); not under version control. |
 
 ## License
 

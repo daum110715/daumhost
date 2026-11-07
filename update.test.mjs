@@ -14,7 +14,7 @@ const sha256 = (data) => createHash('sha256').update(data).digest('hex');
 
 /** a release of `files` ({ path: text }), signed, and the server's files for it */
 function release(version, files, key = privateKey) {
-  const manifest = JSON.stringify({ name: 'render-station', version, published: new Date().toISOString(), files: Object.fromEntries(Object.entries(files).map(([p, t]) => [p, { sha256: sha256(Buffer.from(t)), size: Buffer.byteLength(t) }])) });
+  const manifest = JSON.stringify({ name: 'daumhost', version, published: new Date().toISOString(), files: Object.fromEntries(Object.entries(files).map(([p, t]) => [p, { sha256: sha256(Buffer.from(t)), size: Buffer.byteLength(t) }])) });
   const text = JSON.stringify({ manifest, signature: sign(null, Buffer.from(manifest), key).toString('base64') });
   const served = Object.fromEntries(Object.values(files).map((t) => [`files/${sha256(Buffer.from(t))}.gz`, gzipSync(Buffer.from(t))]));
   return { text, served, m: openRelease(text, KEY) };

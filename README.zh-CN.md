@@ -12,10 +12,10 @@ daumhost 让服务器上运行的 agent 把高负载任务交给另一台电脑�
 |---|---|
 | 服务器 | 运行 agent、提交任务的机器，通常是 Linux。 |
 | 设备 | 运行 daumhost、执行任务的 Windows 电脑。 |
-| daumhost | 托盘程序 `渲染站.exe` 与后台进程 `station.mjs` 的合称，负责管理任务服务、隧道和设置界面。 |
+| daumhost | 托盘程序 `daumhost.exe` 与后台进程 `daumhost.mjs` 的合称，负责管理任务服务、隧道和设置界面。 |
 | 任务服务 | `worker.mjs`，监听设备的 `127.0.0.1:7700`，执行任务。 |
 | 工作区 | 设备上登记的一个文件夹。任务只在登记的工作区里运行。 |
-| 预设任务 | 工作区文件 `render-station.json` 中定义的任务，服务器可以直接调用，无需逐次审批。 |
+| 预设任务 | 工作区文件 `daumhost.json` 中定义的任务，服务器可以直接调用，无需逐次审批。 |
 
 ## 工作原理
 
@@ -47,18 +47,18 @@ daumhost 让服务器上运行的 agent 把高负载任务交给另一台电脑�
 
 ### 设备
 
-1. 下载安装程序：<https://8.137.206.169/assets/render-station/render-station-setup.exe>（约 40 MB，内含 Node.js）。
+1. 下载安装程序：<https://8.137.206.169/assets/daumhost/daumhost-setup.exe>（约 40 MB，内含 Node.js）。
 2. 运行安装程序。安装程序没有代码签名，Windows 可能提示「Windows 已保护你的电脑」，此时单击「更多信息」，再单击「仍要运行」。
-3. 单击「安装」。daumhost 按当前用户安装到 `%LOCALAPPDATA%\Programs\render-station\`，无需管理员权限；安装完成后自动启动，并在桌面和开始菜单中创建「daumhost」快捷方式。
+3. 单击「安装」。daumhost 按当前用户安装到 `%LOCALAPPDATA%\Programs\daumhost\`，无需管理员权限；安装完成后自动启动，并在桌面和开始菜单中创建「daumhost」快捷方式。
 4. 在窗口的「设置 → 连接」页填写服务器的 SSH 地址和端口，再在「设置 → 工作区」页登记工作区。修改即时保存。
 
 安装程序会先关闭正在运行的 daumhost。重新运行新版本的安装程序即可覆盖安装，设置保持不变。卸载时，在 Windows 的「设置 → 应用 → 已安装的应用」中找到「daumhost」，选择「卸载」；卸载时可以选择是否保留设置和任务输出。
 
-也可以直接使用本仓库的检出运行：克隆本仓库，在仓库根目录执行 `npm install`，再双击 `渲染站.exe`。这种方式需要设备已安装 Node.js 和 Git，并通过 Git 更新（见「自动更新」）。`渲染站.exe` 必须与 `station.mjs` 位于同一目录。
+也可以直接使用本仓库的检出运行：克隆本仓库，在仓库根目录执行 `npm install`，再双击 `daumhost.exe`。这种方式需要设备已安装 Node.js 和 Git，并通过 Git 更新（见「自动更新」）。`daumhost.exe` 必须与 `daumhost.mjs` 位于同一目录。
 
 ### 服务器
 
-克隆本仓库，并在仓库目录中执行 `npm link`，即可安装 `daumhost`、`render-station` 和 `daumhost` 两个命令（见「命令行」）。不执行时，可在仓库目录中改用 `node cli.mjs`。
+克隆本仓库，并在仓库目录中执行 `npm link`，即可安装 `daumhost`、`daumhost` 和 `daumhost` 两个命令（见「命令行」）。不执行时，可在仓库目录中改用 `node cli.mjs`。
 
 ## 配置
 
@@ -106,7 +106,7 @@ daumhost 让服务器上运行的 agent 把高负载任务交给另一台电脑�
 
 ## 工作区文件
 
-工作区根目录下的 `render-station.json` 规定该工作区需要的设置和提供的预设任务。没有这个文件的工作区只能运行 Shell 任务。示例：
+工作区根目录下的 `daumhost.json` 规定该工作区需要的设置和提供的预设任务。没有这个文件的工作区只能运行 Shell 任务。示例：
 
 ```json
 {
@@ -159,7 +159,7 @@ daumhost 让服务器上运行的 agent 把高负载任务交给另一台电脑�
 
 ### 通用工作区 `common`
 
-任何项目都不必有自己的工作区才能用这台电脑：`daumhost run --src <目录> --out <目录> common/node [参数…]` 带上这个目录，运行其中的 `main.mjs`，把它写进 `out/` 的文件取回。要用浏览器，把 `kit/chrome.mjs` 复制到脚本旁边（无头 Chrome 或 Edge，走 CDP）。工作区文件是 `kit/render-station.json`：放进 `daumhost ws add common F:/project/common --create` 建好的文件夹。不要借用别的项目的预设任务。
+任何项目都不必有自己的工作区才能用这台电脑：`daumhost run --src <目录> --out <目录> common/node [参数…]` 带上这个目录，运行其中的 `main.mjs`，把它写进 `out/` 的文件取回。要用浏览器，把 `kit/chrome.mjs` 复制到脚本旁边（无头 Chrome 或 Edge，走 CDP）。工作区文件是 `kit/daumhost.json`：放进 `daumhost ws add common F:/project/common --create` 建好的文件夹。不要借用别的项目的预设任务。
 
 ## 使用
 
@@ -179,7 +179,7 @@ daumhost 让服务器上运行的 agent 把高负载任务交给另一台电脑�
 
 ### 窗口
 
-窗口由 WebView2 加载 `station.html`，不使用系统标题栏，最小化、最大化和关闭按钮位于页面右上角。拖动页面顶部或左侧导航的空白处可移动窗口，双击可最大化或还原。窗口记住上次的位置、大小和是否最大化。关闭窗口后，页面在后台保留 5 分钟，在此期间再次打开会立即显示。左侧导航包含四项：
+窗口由 WebView2 加载 `daumhost.html`，不使用系统标题栏，最小化、最大化和关闭按钮位于页面右上角。拖动页面顶部或左侧导航的空白处可移动窗口，双击可最大化或还原。窗口记住上次的位置、大小和是否最大化。关闭窗口后，页面在后台保留 5 分钟，在此期间再次打开会立即显示。左侧导航包含四项：
 
 - 「总览」：运行状态和进度条、当日统计、最近两分钟的处理器、内存和显卡占用，以及最近的任务及其输出。有多个任务运行或排队时，「运行中」列出各任务及其进度。
 - 「输出」：本机保留的任务产出。图片和视频可以直接预览（鼠标悬停时播放视频，单击查看大图，左右方向键切换），其他文件单击后用系统默认程序打开。
@@ -192,7 +192,7 @@ daumhost 让服务器上运行的 agent 把高负载任务交给另一台电脑�
 
 ### 运行状态与日志
 
-设备从睡眠中唤醒、网络中断或任务服务退出后，daumhost 会自动重建隧道并重启服务。运行日志位于 `.tools/remote/station.log`，可从托盘菜单的「查看日志」或「设置 → 更新与关于」打开。
+设备从睡眠中唤醒、网络中断或任务服务退出后，daumhost 会自动重建隧道并重启服务。运行日志位于 `.tools/remote/daumhost.log`，可从托盘菜单的「查看日志」或「设置 → 更新与关于」打开。
 
 隧道建立期间，任何能登录服务器的用户都可以调用设备上的预设任务。不使用时，应在窗口或托盘菜单中选择「暂停接收任务」。暂停后隧道关闭，服务器无法提交任务。
 
@@ -249,13 +249,13 @@ daumhost 默认不接受 Shell 任务。须在设备的「设置 → 权限与�
 - 以管理员身份运行时，daumhost 及其运行的一切都具有管理员权限，预设任务或获准的命令可以修改系统设置和任意文件。每次启动都须经 Windows 的「用户账户控制」确认；关闭「以管理员身份运行」即不再询问。
 - 拒绝、审批超时或提交方断开连接时，待审批的命令、工作区变更和文件夹查看请求都不会执行。
 - 关闭 Shell 权限或暂停接收任务后，后续任务被拒绝，待审批的请求和 YOLO 模式被撤销，排队的任务被取消，已在运行的命令不会被中止。执行超时或提交方断开连接时，daumhost 会尝试结束该命令的进程树。
-- 模式切换、待审批的请求、人工决定、执行的命令、工作目录、执行结果、工作区变更，以及在工作区以外查看的文件夹，均记录在设备的 `.tools/remote/station.log` 中。
+- 模式切换、待审批的请求、人工决定、执行的命令、工作目录、执行结果、工作区变更，以及在工作区以外查看的文件夹，均记录在设备的 `.tools/remote/daumhost.log` 中。
 
 ## 剪贴板同步
 
 在「设置 → 权限与审批」中开启「同步剪贴板」后，设备和服务器之间自动同步剪贴板：
 
-- 在设备上复制的文字和图片，约 1 秒内通过 SSH 写入服务器的 `~/.render-station/clipboard/`：最新的一份为 `latest.txt` 或 `latest.png`（图片一律转为 PNG），`history/` 中保留最近 50 份。连续复制时只同步最后一份；隧道未连接时，连接后补发最近的一份。这个文件夹在设备所登录账号的主目录里，也就是密码文件所写的那个；`daumhost` 和 `xclip` 会在那里和（与之不同时）`$HOME` 里都找，读最后到的那一份。
+- 在设备上复制的文字和图片，约 1 秒内通过 SSH 写入服务器的 `~/.daumhost/clipboard/`：最新的一份为 `latest.txt` 或 `latest.png`（图片一律转为 PNG），`history/` 中保留最近 50 份。连续复制时只同步最后一份；隧道未连接时，连接后补发最近的一份。这个文件夹在设备所登录账号的主目录里，也就是密码文件所写的那个；`daumhost` 和 `xclip` 会在那里和（与之不同时）`$HOME` 里都找，读最后到的那一份。
 - 服务器用 `daumhost clip set` 写入设备的剪贴板，写入的内容不会再同步回服务器。
 - 在服务器上，`daumhost clip` 输出最新的一份（图片则输出其路径），`daumhost clip ls` 列出历史。这两个命令只读取服务器上的文件，不需要设备在线。
 - 密码管理器等程序标记为不记录的内容，以及超过 20 MB 的内容，不会同步。
@@ -270,9 +270,9 @@ daumhost clip set --file shot.png
 
 ## 自动更新
 
-开启后，daumhost 在启动 1 分钟后检查一次，此后每 30 分钟检查一次；也可以在「设置 → 更新与关于」中单击「立即检查」。有任务正在运行、排队或等待审批时，等这些全部结束后再更新。更新涉及 daumhost 自身的文件时，daumhost 自动重启；`渲染站.exe` 更新后，托盘程序自动替换为新版本。
+开启后，daumhost 在启动 1 分钟后检查一次，此后每 30 分钟检查一次；也可以在「设置 → 更新与关于」中单击「立即检查」。有任务正在运行、排队或等待审批时，等这些全部结束后再更新。更新涉及 daumhost 自身的文件时，daumhost 自动重启；`daumhost.exe` 更新后，托盘程序自动替换为新版本。
 
-**安装程序安装的副本**从更新服务器 `https://8.137.206.169/assets/render-station/` 获取新版本：
+**安装程序安装的副本**从更新服务器 `https://8.137.206.169/assets/daumhost/` 获取新版本：
 
 - 服务器上的 `latest.json` 列出新版本的每个文件及其 SHA-256，并带有发布密钥的 Ed25519 签名。daumhost 只接受签名有效、版本号更高的发布。
 - 只下载有变化的文件（`files/<SHA-256>.gz`），逐个校验后再替换；替换失败时全部恢复原状。被替换的文件先改名为 `*.old`，下次启动时删除。
@@ -282,15 +282,15 @@ daumhost clip set --file shot.png
 
 ## 托盘程序
 
-`渲染站.exe` 的源码为 `exe/station.c`，其行为如下：
+`daumhost.exe` 的源码为 `exe/daumhost.c`，其行为如下：
 
-- 启动时，先将自身和 `WebView2Loader.dll` 复制到 `%LOCALAPPDATA%\render-station\`，再从该位置运行。因此安装位置（或仓库）中的 exe 不会被占用，更新时可以直接替换。
-- 在后台启动 `station.mjs`，进程退出后自动重新启动。优先使用安装位置中的 `node\node.exe`，没有时使用系统安装的 Node.js。
+- 启动时，先将自身和 `WebView2Loader.dll` 复制到 `%LOCALAPPDATA%\daumhost\`，再从该位置运行。因此安装位置（或仓库）中的 exe 不会被占用，更新时可以直接替换。
+- 在后台启动 `daumhost.mjs`，进程退出后自动重新启动。优先使用安装位置中的 `node\node.exe`，没有时使用系统安装的 Node.js。
 - 将 daumhost 及其启动的 ssh 和任务进程放入同一个作业对象，退出时一并结束。
 - 以普通权限启动时，托盘程序通过「用户账户控制」（`runas`）申请管理员权限，由获准后启动的副本继续运行；存在 `.tools\remote\no-elevate`（即已关闭「以管理员身份运行」）时不申请。选择「否」时以普通权限继续运行。更新后的重启沿用原有权限，不再询问。以管理员身份运行时，仍接受普通权限进程发来的消息：再次启动时打开窗口、安装程序要求退出，以及资源管理器的消息。
-- 窗口的位置、大小和是否最大化保存在注册表的 `HKCU\Software\render-station` 中，卸载时删除。
-- `渲染站.exe --uninstall` 卸载安装程序安装的副本，Windows 的「已安装的应用」调用的就是它。
-- `渲染站.exe --try` 是试运行：在已运行的 daumhost 旁边打开新编译版本的窗口，连接同一个页面，并带一个单独的托盘图标，用于再次打开窗口或结束试运行。试运行不启动后台进程，不修改开机自启和快捷方式，不申请管理员权限；日志和 WebView2 数据位于 `%LOCALAPPDATA%\render-station\try\`。再次启动试运行时，上一个试运行先退出；窗口关闭 5 分钟后，试运行自动结束。
+- 窗口的位置、大小和是否最大化保存在注册表的 `HKCU\Software\daumhost` 中，卸载时删除。
+- `daumhost.exe --uninstall` 卸载安装程序安装的副本，Windows 的「已安装的应用」调用的就是它。
+- `daumhost.exe --try` 是试运行：在已运行的 daumhost 旁边打开新编译版本的窗口，连接同一个页面，并带一个单独的托盘图标，用于再次打开窗口或结束试运行。试运行不启动后台进程，不修改开机自启和快捷方式，不申请管理员权限；日志和 WebView2 数据位于 `%LOCALAPPDATA%\daumhost\try\`。再次启动试运行时，上一个试运行先退出；窗口关闭 5 分钟后，试运行自动结束。
 
 ## 不使用托盘程序运行
 
@@ -312,17 +312,17 @@ ssh -N -R 7700:127.0.0.1:7700 -p <端口> <用户名>@<服务器>
 ## 开发
 
 - 测试：`node --test`。
-- 编译 `渲染站.exe`：`node exe/build.mjs`。脚本先在 `.tools/exe-build/` 中备齐源码、资源、图标和 WebView2 SDK 的头文件与 `WebView2Loader.dll`（SDK 即 NuGet 包 `Microsoft.Web.WebView2`，解压到 `.tools/webview2/`），再由 `exe/compile.mjs` 编译。编译结果输出到仓库根目录，同时编译安装程序的主体 `.tools/exe-build/setup.exe`。
-  - 设备在线且已设置好时，通过预设任务 `render-station/exe` 在设备上编译；否则在本机用 mingw-w64（`x86_64-w64-mingw32-gcc`）交叉编译。加 `--local` 时总在本机编译。
-  - 设备上的设置：把 daumhost 自身的安装文件夹登记为工作区 `render-station`（文件夹中的 `render-station.json` 提供该预设），并把它的 `MINGW` 设为 mingw-w64 的 `bin` 文件夹，例如 [w64devkit](https://github.com/skeeto/w64devkit) 的 `w64devkit\bin`。预设只编译带上的源码，不运行它们。
-  - `node exe/build.mjs --try`：在设备上编译后，通过 Shell 任务在设备上以 `--try` 启动新编译的 `渲染站.exe`，须在设备上批准。
-- 修改 `exe/` 中的文件后，须重新编译，并将 `渲染站.exe` 与源码一并提交。
+- 编译 `daumhost.exe`：`node exe/build.mjs`。脚本先在 `.tools/exe-build/` 中备齐源码、资源、图标和 WebView2 SDK 的头文件与 `WebView2Loader.dll`（SDK 即 NuGet 包 `Microsoft.Web.WebView2`，解压到 `.tools/webview2/`），再由 `exe/compile.mjs` 编译。编译结果输出到仓库根目录，同时编译安装程序的主体 `.tools/exe-build/setup.exe`。
+  - 设备在线且已设置好时，通过预设任务 `daumhost/exe` 在设备上编译；否则在本机用 mingw-w64（`x86_64-w64-mingw32-gcc`）交叉编译。加 `--local` 时总在本机编译。
+  - 设备上的设置：把 daumhost 自身的安装文件夹登记为工作区 `daumhost`（文件夹中的 `daumhost.json` 提供该预设），并把它的 `MINGW` 设为 mingw-w64 的 `bin` 文件夹，例如 [w64devkit](https://github.com/skeeto/w64devkit) 的 `w64devkit\bin`。预设只编译带上的源码，不运行它们。
+  - `node exe/build.mjs --try`：在设备上编译后，通过 Shell 任务在设备上以 `--try` 启动新编译的 `daumhost.exe`，须在设备上批准。
+- 修改 `exe/` 中的文件后，须重新编译，并将 `daumhost.exe` 与源码一并提交。
 
 ### 发布
 
 1. 修改 `package.json` 中的版本号，提交全部改动。
 2. `node release/build.mjs`：把已提交的文件、窗口用到的字体和 Windows 版 Node.js（`release/build.mjs` 中的 `NODE`，首次运行时从 nodejs.org 下载并校验）打包，生成签名的 `latest.json`、更新用的 `files/<SHA-256>.gz` 和安装程序，输出到 `.tools/release/out/`。
-3. `node release/publish.mjs`：通过 `ssh lu1` 上传到 lu1 的 `/home/user1/apps/render-station/public/`，依次上传文件、安装程序（并把 `render-station-setup.exe` 设为指向它的链接）和 `latest.json`，最后从公网地址读取 `latest.json` 核对。
+3. `node release/publish.mjs`：通过 `ssh lu1` 上传到 lu1 的 `/home/user1/apps/daumhost/public/`，依次上传文件、安装程序（并把 `daumhost-setup.exe` 设为指向它的链接）和 `latest.json`，最后从公网地址读取 `latest.json` 核对。
 
 发布密钥的私钥位于 `.tools/release/key.pem`，不纳入版本控制，公钥写在 `update.mjs` 的 `KEY` 中。私钥须另行备份：丢失后，已安装的副本无法再接受新版本，只能重新安装。
 
@@ -330,22 +330,22 @@ ssh -N -R 7700:127.0.0.1:7700 -p <端口> <用户名>@<服务器>
 
 | 路径 | 说明 |
 |---|---|
-| `cli.mjs` | 服务器上的命令行工具，安装后的命令为 `daumhost`、`render-station` 和 `daumhost`。 |
+| `cli.mjs` | 服务器上的命令行工具，安装后的命令为 `daumhost`、`daumhost` 和 `daumhost`。 |
 | `docs/` | 命令行手册（`cli.md`、`cli.zh-CN.md`）。 |
 | `update.mjs` | 安装副本的更新：校验发布签名，下载、校验并替换文件。 |
 | `worker.mjs` | 任务服务：接收任务，排队、执行，并返回结果；转交服务器的工作区变更和文件夹查看请求。 |
 | `workspace.mjs` | 工作区文件的读取和校验、glob、预设任务的命令和产出、工作区变更的校验、旧版设置的导入，以及文件夹内容的列出。 |
 | `shell.mjs` | Shell 任务的审批、白名单和执行，以及审批队列。 |
-| `station.mjs` | daumhost 的后台进程：管理任务服务、隧道和配置，并在 `127.0.0.1:7799` 上提供窗口页面。 |
-| `station.html` | daumhost 的窗口页面。 |
-| `渲染站.exe` | 托盘程序的编译产物。 |
+| `daumhost.mjs` | daumhost 的后台进程：管理任务服务、隧道和配置，并在 `127.0.0.1:7799` 上提供窗口页面。 |
+| `daumhost.html` | daumhost 的窗口页面。 |
+| `daumhost.exe` | 托盘程序的编译产物。 |
 | `WebView2Loader.dll` | 托盘程序窗口所需的 WebView2 加载器。 |
-| `exe/` | 托盘程序的源码（`station.c`、`station.rc`、`station.manifest`）、安装程序的源码（`setup.c`、`setup.rc`）、两者共用的 `common.h`，以及编译脚本：`build.mjs` 备齐文件并选择在哪里编译，`compile.mjs` 调用 mingw-w64 编译。 |
-| `render-station.json` | daumhost 自身的工作区文件：安装文件夹登记为工作区后，提供在设备上编译 `渲染站.exe` 的预设任务 `exe`。 |
+| `exe/` | 托盘程序的源码（`daumhost.c`、`daumhost.rc`、`daumhost.manifest`）、安装程序的源码（`setup.c`、`setup.rc`）、两者共用的 `common.h`，以及编译脚本：`build.mjs` 备齐文件并选择在哪里编译，`compile.mjs` 调用 mingw-w64 编译。 |
+| `daumhost.json` | daumhost 自身的工作区文件：安装文件夹登记为工作区后，提供在设备上编译 `daumhost.exe` 的预设任务 `exe`。 |
 | `release/` | 发布脚本：`build.mjs` 打包并签名，`publish.mjs` 上传到更新服务器。 |
 | `*.test.mjs` | 测试。 |
 | `release.json` | 仅存在于安装副本中：当前版本的签名清单。 |
-| `.tools/` | 运行时数据（`remote/config.json`、`remote/station.log`、`remote/no-elevate`、`remote/jobs/`、`remote/out/`、`results/`、`update/`）、WebView2 SDK（`webview2/`）和发布用的文件（`release/`），不纳入版本控制。 |
+| `.tools/` | 运行时数据（`remote/config.json`、`remote/daumhost.log`、`remote/no-elevate`、`remote/jobs/`、`remote/out/`、`results/`、`update/`）、WebView2 SDK（`webview2/`）和发布用的文件（`release/`），不纳入版本控制。 |
 
 ## 许可
 

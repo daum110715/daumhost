@@ -1,5 +1,5 @@
 // Local-owner approvals for remote shell jobs (and the queue of requests awaiting the owner, which
-// the station's workspace changes use too). This is an authorization gate, not an OS sandbox.
+// daumhost's workspace changes use too). This is an authorization gate, not an OS sandbox.
 import { execFileSync, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -16,7 +16,7 @@ export function isAdministrator() {
 export function shellRequest(input, workspace, unrestricted = false) {
   if (!input || typeof input.command !== 'string' || !input.command.trim() || input.command.length > 32768 || input.command.includes('\0')) throw new Error('shell command must be nonempty text (max 32768 characters)');
   if (input.cwd != null && typeof input.cwd !== 'string') throw new Error('cwd must be a path');
-  if (!workspace) throw new Error('no workspace registered on this machine: add one in the local station settings');
+  if (!workspace) throw new Error('no workspace registered on this machine: add one in the local daumhost settings');
   const root = realpathSync(workspace);
   const cwd = realpathSync(resolve(root, input.cwd ?? '.'));
   const rel = relative(root, cwd);
@@ -94,7 +94,7 @@ export function createShellGate({ workspaces, policy, save, admin = false, chang
     revoke,
     setYolo(on) {
       if (typeof on !== 'boolean') throw new Error('on must be boolean');
-      if (on && (!admin || !policy().enabled)) throw new Error('YOLO requires an elevated administrator station and shell enabled');
+      if (on && (!admin || !policy().enabled)) throw new Error('YOLO requires an elevated administrator daumhost and shell enabled');
       yolo = on;
       audit(`Shell 模式：${on ? 'YOLO（仅限本次会话，管理员权限）' : 'auto'}`);
       changed();
@@ -119,7 +119,7 @@ export function createShellGate({ workspaces, policy, save, admin = false, chang
     },
     /** a Shell job's request, allowed (`waiting()` once it waits for the owner's decision) */
     async authorize(input, signal, waiting = () => {}) {
-      if (!policy().enabled) throw new Error('Shell is disabled; enable it in the local station settings');
+      if (!policy().enabled) throw new Error('Shell is disabled; enable it in the local daumhost settings');
       if (signal?.aborted) throw new Error('request disconnected');
       const root = rootOf(input.workspace);
       const request = { ...shellRequest(input, root.path, yolo), workspace: root.name };
@@ -197,7 +197,7 @@ export const powershellScript = (command) =>
 export async function executeShell(request, { env = {}, signal, output = () => {} } = {}) {
   const win = process.platform === 'win32';
   // with a byte order mark, as Windows PowerShell reads a script that is not in the ANSI code page
-  const script = win ? join(tmpdir(), `render-station-${randomUUID()}.ps1`) : null;
+  const script = win ? join(tmpdir(), `daumhost-${randomUUID()}.ps1`) : null;
   if (script) writeFileSync(script, `\ufeff${powershellScript(request.command)}`);
   try {
     const reply = await runProcess({

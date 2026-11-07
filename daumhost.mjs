@@ -1,14 +1,14 @@
 // daumhost, daumhost, on the machine that takes the server's heavy work: keeps the worker
 // (worker.mjs) and the reverse SSH tunnel to the server up, through sleep, wake and lost networks,
-// and shows both in a small window (station.html, at http://127.0.0.1:7799): what it is doing, what
+// and shows both in a small window (daumhost.html, at http://127.0.0.1:7799): what it is doing, what
 // ssh and the jobs print as they print it, the jobs lately done and what they made, the settings.
-// The tray icon, 渲染站.exe (exe/station.c), starts it and starts it again if it stops, and keeps
+// The tray icon, daumhost.exe (exe/daumhost.c), starts it and starts it again if it stops, and keeps
 // what the settings ask of Windows (starting with it, the shortcuts), as /tray tells it. Its
 // settings, the server and the workspaces, are in .tools/remote/config.json; what it did, in
-// station.log. While the owner has it so, it keeps this machine's clipboard in step with the server:
+// daumhost.log. While the owner has it so, it keeps this machine's clipboard in step with the server:
 // what is copied here (the tray icon hands it over) goes there through ssh, what the server sends
 // is put on it here.
-// usage: node station.mjs
+// usage: node daumhost.mjs
 import { createServer } from 'node:http';
 import { execFile, spawn } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
@@ -47,15 +47,15 @@ let today = { day: new Date().toDateString(), done: 0, failed: 0 };
 let workerError = null;
 let quitting = false;
 
-// ——— what happened: kept in station.log, and shown in the window as it happens ———
-const LOG = join(dir, 'station.log');
+// ——— what happened: kept in daumhost.log, and shown in the window as it happens ———
+const LOG = join(dir, 'daumhost.log');
 if (existsSync(LOG) && statSync(LOG).size > 1e6) rmSync(LOG);
 const log = (line) => appendFileSync(LOG, `${new Date().toISOString()}  ${line}\n`);
 process.on('uncaughtException', (e) => {
   log(`daumhost 因错误退出：${e?.stack ?? e}`);
   process.exit(1);
 });
-/** the window's feed, the latest 600 lines: what the station says ('station', 'tunnel', 'job', 'shell')
+/** the window's feed, the latest 600 lines: what daumhost says ('daumhost', 'tunnel', 'job', 'shell')
  *  and what ssh and the jobs print ('ssh', 'out'), a job's lines with its id */
 const feed = [];
 let fresh = [];
@@ -100,7 +100,9 @@ let config = {
   clipboard: false,
 };
 try {
-  const saved = JSON.parse(readFileSync(CONFIG, 'utf8'));
+  // (for 0.8.0 only: settings moved from the install under the old name, which name its folder)
+  const saved = JSON.parse(readFileSync(CONFIG, 'utf8').replaceAll('Programs\\\\render-station', 'Programs\\\\daumhost'));
+  for (const w of saved.workspaces ?? []) if (w.name === 'render-station') w.name = 'daumhost';
   config = { ...config, ...saved, ssh: { ...config.ssh, ...saved.ssh } };
 } catch {}
 const save = () => writeFileSync(CONFIG, JSON.stringify(config, null, 2));
@@ -136,10 +138,10 @@ function checkWorkspaces(list) {
   return out;
 }
 const shellToken = randomBytes(32).toString('hex');
-// this run of the station: a window served by an earlier run holds a token no longer good, and loads again
+// this run of daumhost: a window served by an earlier run holds a token no longer good, and loads again
 const boot = randomBytes(8).toString('hex');
-/** whether this runs as administrator, and whether 渲染站.exe is not to ask for it at each start
- *  (the overview page's switch, turned off: exe/station.c reads this file) */
+/** whether this runs as administrator, and whether daumhost.exe is not to ask for it at each start
+ *  (the overview page's switch, turned off: exe/daumhost.c reads this file) */
 const admin = isAdministrator();
 const NO_ELEVATE = join(dir, 'no-elevate');
 /** the request awaiting approval the tray icon told of last, and those told of while any wait
@@ -159,7 +161,7 @@ const shellGate = createShellGate({
 // /workspace and /browse, from cli.mjs workspace and ls): as config.manage lets them, each shown to
 // the owner first unless it is 'allow' ———
 const wsApprovals = createApprovals({ changed: () => (askChanged(), push(), idle()) });
-const OFF = 'the owner does not let the server manage workspaces or look through folders: allow it in the local station settings';
+const OFF = 'the owner does not let the server manage workspaces or look through folders: allow it in the local daumhost settings';
 /** a change the server asks, against the settings as they are (workspace.mjs) */
 const planChange = (input) => changeWorkspaces(config.workspaces, input, config.env);
 const CHANGE = { add: '添加工作区', set: '修改工作区', remove: '移除工作区' };
@@ -170,10 +172,10 @@ async function serverChange(input, signal, waiting = () => {}) {
   const what = `${CHANGE[input.action]} ${input.name}`;
   if (manageMode() === 'ask') {
     waiting();
-    note('station', `服务器请求${what}，等待本机审批`);
+    note('daumhost', `服务器请求${what}，等待本机审批`);
     const action = await wsApprovals.ask({ action: input.action, name: input.name, lines: plan.lines, presets: plan.presets }, signal);
     if (action !== 'allow') {
-      note('station', `服务器的请求未获批准（${action === 'deny' ? '已拒绝' : '已超时或已取消'}）：${what}`);
+      note('daumhost', `服务器的请求未获批准（${action === 'deny' ? '已拒绝' : '已超时或已取消'}）：${what}`);
       throw new Error(action === 'deny' ? 'the owner denied the change' : 'the change was not approved within 5 minutes, or was cancelled');
     }
   }
@@ -190,7 +192,7 @@ async function serverChange(input, signal, waiting = () => {}) {
   }
   config.workspaces = now.list;
   save();
-  note('station', `${manageMode() === 'allow' ? '已按服务器的请求' : '已批准服务器的请求，'}${what}${now.lines.length ? `：${now.lines.join('；')}` : ''}`);
+  note('daumhost', `${manageMode() === 'allow' ? '已按服务器的请求' : '已批准服务器的请求，'}${what}${now.lines.length ? `：${now.lines.join('；')}` : ''}`);
   const w = workspaces().find((x) => x.name === input.name);
   push();
   return {
@@ -224,17 +226,17 @@ async function serverBrowse(input, signal, waiting = () => {}) {
   const open = opened.some((o) => (o.path === null ? path === null : path && within(path, o.path)));
   if (manageMode() === 'ask' && !inWorkspace && !open) {
     waiting();
-    note('station', `服务器请求查看${where}，等待本机审批`);
+    note('daumhost', `服务器请求查看${where}，等待本机审批`);
     const action = await wsApprovals.ask({ action: 'browse', path }, signal);
     if (action !== 'allow') {
-      note('station', `服务器的请求未获批准（${action === 'deny' ? '已拒绝' : '已超时或已取消'}）：查看${where}`);
+      note('daumhost', `服务器的请求未获批准（${action === 'deny' ? '已拒绝' : '已超时或已取消'}）：查看${where}`);
       throw new Error(action === 'deny' ? 'the owner denied it' : 'it was not approved within 5 minutes, or was cancelled');
     }
     if (manageMode() === 'off') throw new Error(OFF);
     opened.push({ path, until: Date.now() + OPEN_FOR });
   }
   const list = listFolder(path);
-  if (!inWorkspace) note('station', `服务器查看了${where}`);
+  if (!inWorkspace) note('daumhost', `服务器查看了${where}`);
   return list;
 }
 
@@ -291,7 +293,7 @@ function sample() {
 // ——— keeping up to date. An installed copy (release.json here) follows the releases published on
 // the update server (update.mjs); a checkout, its branch's new commits, fast-forward only, and only
 // into a checkout with nothing of its own in it. Never while a job runs, waits its turn or awaits the
-// owner's approval. When the station's code changed it starts again (exit 75: the tray icon starts
+// owner's approval. When daumhost's code changed it starts again (exit 75: the tray icon starts
 // it at once); when the tray icon's did, the tray icon starts itself again ———
 const installed = existsSync(join(repo, RELEASE));
 const STAGE = join(repo, '.tools/update');
@@ -321,12 +323,12 @@ async function readVersion() {
 }
 let trayAgain = false;
 let updateAfterJob = false;
-/** after an update: the tray icon starts itself again if its program changed, else the station does
+/** after an update: the tray icon starts itself again if its program changed, else daumhost does
  *  if what changed is of its own */
 function restartFor(changed, ours) {
   if (changed.some((f) => /^(daumhost\.exe|WebView2Loader\.dll)$/.test(f))) trayAgain = true;
   else if (changed.some(ours)) {
-    note('station', 'daumhost 的代码已更新，即将重新启动');
+    note('daumhost', 'daumhost 的代码已更新，即将重新启动');
     setTimeout(() => {
       stop();
       process.exit(75);
@@ -366,7 +368,7 @@ async function checkUpdate() {
   const merged = await git(['merge', '--ff-only', '--quiet', up.out]);
   if (!merged.ok) return done('error', `更新失败：${merged.err}`);
   await readVersion();
-  note('station', `已更新到最新版本（${behind.out} 个新提交）`);
+  note('daumhost', `已更新到最新版本（${behind.out} 个新提交）`);
   done('updated', `已更新（${behind.out} 个新提交）`);
   restartFor(changed, (f) => /^[\w.-]+\.mjs$/.test(f));
 }
@@ -413,7 +415,7 @@ async function checkRelease(done) {
     }
     const changed = applyRelease({ root: repo, stage: STAGE, now, next, text });
     await readVersion();
-    note('station', `已更新到 ${next.version}（${changed.length} 个文件）`);
+    note('daumhost', `已更新到 ${next.version}（${changed.length} 个文件）`);
     done('updated', `已更新到 ${next.version}`);
     restartFor(changed, () => true);
   } catch (e) {
@@ -495,7 +497,7 @@ const view = () => ({
   theme: { cream: 'cream', teal: 'teal', lime: 'teal' }[config.theme] ?? 'plum',
   paths: { log: LOG },
   // the page, as it is on disk: a window showing an older one loads it again
-  page: statSync(join(here, 'station.html')).mtimeMs,
+  page: statSync(join(here, 'daumhost.html')).mtimeMs,
   boot,
 });
 // ——— what the tray icon tells of: the job that ended last, or a request newly awaiting the owner's
@@ -601,11 +603,11 @@ function startWorker() {
   worker = server;
   server.on('listening', () => {
     workerError = null;
-    note('station', `任务服务已就绪，监听 127.0.0.1:${WORKER}`);
+    note('daumhost', `任务服务已就绪，监听 127.0.0.1:${WORKER}`);
   });
   server.on('error', (e) => {
     workerError = e.code === 'EADDRINUSE' ? `端口 ${WORKER} 已被占用，可能另有一个 worker.mjs 正在运行` : e.message;
-    note('station', `任务服务无法启动：${workerError}。10 秒后重试`);
+    note('daumhost', `任务服务无法启动：${workerError}。10 秒后重试`);
     // try again once whatever held the port has let go
     setTimeout(startWorker, 10000);
   });
@@ -706,7 +708,7 @@ function stop() {
   shellGate.revoke();
   wsApprovals.clear();
   opened = [];
-  // those waiting their turn: turned away, if the station no longer takes jobs
+  // those waiting their turn: turned away, if daumhost no longer takes jobs
   worker?.schedule();
   const p = ssh;
   ssh = null;
@@ -731,10 +733,10 @@ setInterval(() => {
 }, 5000);
 
 // ——— the clipboard, in step with the server's while config.clipboard says so. What is copied here
-// (渲染站.exe hands it over: /clip, text or a PNG) goes to the server with ssh, into
-// ~/.render-station/clipboard/ there, where cli.mjs clip reads it: the latest of a few copied in a
+// (daumhost.exe hands it over: /clip, text or a PNG) goes to the server with ssh, into
+// ~/.daumhost/clipboard/ there, where cli.mjs clip reads it: the latest of a few copied in a
 // row, once the tunnel is up. What the server sends (worker.mjs /clip, cli.mjs clip set) is put on the
-// clipboard here by 渲染站.exe --clip-set, marked so it does not come back. Neither is shown but in
+// clipboard here by daumhost.exe --clip-set, marked so it does not come back. Neither is shown but in
 // the feed and the log, and what was copied is not written there ———
 const CLIP_MAX = 20 * 1024 * 1024;
 const CLIP_KIND = { text: '文字', image: '图片' };
@@ -751,7 +753,7 @@ let clipSending = false;
 let clipTimer = null;
 /** on the server: what comes in kept as history/<time>.<ext>, and as latest.<ext>, the newest 50 kept */
 const clipRemote = (ext) =>
-  `exec sh -c 'd="$HOME/.render-station/clipboard"; mkdir -p "$d/history" && f="$d/history/$(date +%Y%m%d-%H%M%S)-$$.${ext}" && cat > "$f.part" && mv "$f.part" "$f" && rm -f "$d"/latest.* && cp "$f" "$d/latest.${ext}" && ls -1 "$d/history" | sort -r | tail -n +51 | while read -r x; do rm -f "$d/history/$x"; done'`;
+  `exec sh -c 'd="$HOME/.daumhost/clipboard"; mkdir -p "$d/history" && f="$d/history/$(date +%Y%m%d-%H%M%S)-$$.${ext}" && cat > "$f.part" && mv "$f.part" "$f" && rm -f "$d"/latest.* && cp "$f" "$d/latest.${ext}" && ls -1 "$d/history" | sort -r | tail -n +51 | while read -r x; do rm -f "$d/history/$x"; done'`;
 function clipIn(type, data) {
   if (!data.length) return;
   const digest = clipDigest(type, data);
@@ -797,14 +799,14 @@ function sendClip() {
     if (code === 0) {
       clipHave = item.digest;
       clipLast = { ...last, ok: true };
-      note('station', `剪贴板：已同步到服务器（${what}）`);
+      note('daumhost', `剪贴板：已同步到服务器（${what}）`);
     } else {
       const why = err.split(/\r?\n/).filter((l) => l.trim()).at(-1) ?? `ssh 退出码 ${code}`;
       // again in a while, unless something newer has been copied meanwhile
       const again = !clipOutbox && ++item.tries < 3;
       if (again) clipOutbox = item;
       clipLast = { ...last, ok: false, why, again };
-      note('station', `剪贴板：同步到服务器失败（${what}）：${why}${again ? '。15 秒后重试' : ''}`);
+      note('daumhost', `剪贴板：同步到服务器失败（${what}）：${why}${again ? '。15 秒后重试' : ''}`);
       if (again) return (clipTimer = setTimeout(sendClip, 15000), push());
     }
     push();
@@ -813,7 +815,7 @@ function sendClip() {
   p.on('error', (e) => ((err += e.message), end(null)));
   p.on('close', end);
 }
-/** what is copied here, as 渲染站.exe hands it over: the body, text or (image/png) a picture */
+/** what is copied here, as daumhost.exe hands it over: the body, text or (image/png) a picture */
 function takeClip(req, res) {
   const chunks = [];
   let size = 0;
@@ -842,13 +844,13 @@ async function clipSet(input) {
   push();
   let code;
   try {
-    code = await new Promise((done) => execFile(join(repo, '渲染站.exe'), ['--clip-set', file, type], { windowsHide: true, timeout: 15000 }, (e) => done(e ? (typeof e.code === 'number' ? e.code : -1) : 0)));
+    code = await new Promise((done) => execFile(join(repo, 'daumhost.exe'), ['--clip-set', file, type], { windowsHide: true, timeout: 15000 }, (e) => done(e ? (typeof e.code === 'number' ? e.code : -1) : 0)));
   } finally {
     rmSync(file, { force: true });
     clipGoing = null;
   }
   const last = { way: 'down', type, size: data.length, at: Date.now() };
-  const why = { 2: 'another program holds the clipboard open: try again', 3: 'not a picture Windows can read (PNG, JPEG, BMP, GIF…)' }[code] ?? (code ? `could not put it on the clipboard (渲染站.exe --clip-set: ${code})` : null);
+  const why = { 2: 'another program holds the clipboard open: try again', 3: 'not a picture Windows can read (PNG, JPEG, BMP, GIF…)' }[code] ?? (code ? `could not put it on the clipboard (daumhost.exe --clip-set: ${code})` : null);
   if (why) {
     clipLast = { ...last, ok: false, why: { 2: '剪贴板正被其他程序占用', 3: '不是 Windows 能读取的图片' }[code] ?? `写入失败（${code}）` };
     push();
@@ -856,7 +858,7 @@ async function clipSet(input) {
   }
   clipHave = clipDigest(type, data);
   clipLast = { ...last, ok: true };
-  note('station', `剪贴板：服务器写入了${CLIP_KIND[type]}（${bytes(data.length)}）`);
+  note('daumhost', `剪贴板：服务器写入了${CLIP_KIND[type]}（${bytes(data.length)}）`);
   push();
   return { type, size: data.length };
 }
@@ -912,7 +914,7 @@ const ui = createServer(async (req, res) => {
     return res.writeHead(400).end();
   }
   if (req.method === 'GET') {
-    if (path === '/') return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-frame-options': 'DENY' }).end(readFileSync(join(here, 'station.html'), 'utf8').replace('__SHELL_LOCAL_TOKEN__', shellToken));
+    if (path === '/') return res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-frame-options': 'DENY' }).end(readFileSync(join(here, 'daumhost.html'), 'utf8').replace('__SHELL_LOCAL_TOKEN__', shellToken));
     if (path === '/state') return json(res, view());
     if (path.startsWith('/files/')) {
       const file = normalize(join(KEEP, path.slice('/files/'.length)));
@@ -934,7 +936,7 @@ const ui = createServer(async (req, res) => {
   }
   // changes only from the window or the tray: another page cannot send this header without asking
   // first, and is not answered when it asks
-  if (req.method !== 'POST' || req.headers['x-station'] !== '1') return res.writeHead(403).end();
+  if (req.method !== 'POST' || req.headers['x-daumhost'] !== '1') return res.writeHead(403).end();
   if ((path.startsWith('/shell/') || path.startsWith('/manage') || path === '/elevate' || path === '/clipboard') && req.headers['x-shell-local'] !== shellToken) return res.writeHead(403).end();
   // what is copied here, from the tray icon: as it comes, not JSON
   if (path === '/clip') return takeClip(req, res);
@@ -964,7 +966,7 @@ const ui = createServer(async (req, res) => {
       save();
       if (data.mode !== 'ask') wsApprovals.clear();
       opened = [];
-      note('station', `服务器管理工作区：${{ off: '已关闭', ask: '需要本机审批', allow: '无需审批' }[data.mode]}`);
+      note('daumhost', `服务器管理工作区：${{ off: '已关闭', ask: '需要本机审批', allow: '无需审批' }[data.mode]}`);
     } else if (path === '/manage/decide') {
       if (!['allow', 'deny'].includes(data.action)) throw new Error('action must be allow or deny');
       wsApprovals.decide(data.id, data.action);
@@ -972,22 +974,22 @@ const ui = createServer(async (req, res) => {
       if (typeof data.on !== 'boolean') throw new Error('on must be boolean');
       if (data.on) rmSync(NO_ELEVATE, { force: true });
       else writeFileSync(NO_ELEVATE, '');
-      note('station', data.on ? '打开 daumhost 时将申请管理员权限' : '打开 daumhost 时将不再申请管理员权限');
+      note('daumhost', data.on ? '打开 daumhost 时将申请管理员权限' : '打开 daumhost 时将不再申请管理员权限');
     } else if (path === '/parallel') {
       if (!Number.isInteger(data.n) || data.n < 1 || data.n > 16) throw new Error('同时运行的任务数须为 1 到 16 之间的整数');
       config.parallel = data.n;
       save();
-      note('station', `同时运行的任务数：${data.n}`);
+      note('daumhost', `同时运行的任务数：${data.n}`);
       worker?.schedule();
     } else if (path === '/pause') {
       config.paused = true;
       save();
       stop();
-      note('station', '已暂停接收任务，隧道已关闭');
+      note('daumhost', '已暂停接收任务，隧道已关闭');
     } else if (path === '/resume') {
       config.paused = false;
       save();
-      note('station', '已恢复接收任务');
+      note('daumhost', '已恢复接收任务');
       restart();
     } else if (path === '/reconnect') {
       note('tunnel', '手动重新连接');
@@ -1004,26 +1006,26 @@ const ui = createServer(async (req, res) => {
       }
       if (data.workspaces) {
         const list = checkWorkspaces(data.workspaces);
-        // one added here: its settings may start from a station's from before workspaces
+        // one added here: its settings may start from a daumhost's from before workspaces
         const known = new Set(config.workspaces.map((w) => samePath(w.path)));
         for (const w of list) {
           if (known.has(samePath(w.path))) continue;
           const taken = adopt(w, config.env);
-          if (taken.length) note('station', `已从旧版 daumhost 的设置中导入工作区 ${resolveWorkspaces([w])[0].name} 的 ${taken.length} 项设置：${taken.join('、')}`);
+          if (taken.length) note('daumhost', `已从旧版 daumhost 的设置中导入工作区 ${resolveWorkspaces([w])[0].name} 的 ${taken.length} 项设置：${taken.join('、')}`);
         }
         config.workspaces = list;
       }
       save();
-      note('station', '设置已保存');
+      note('daumhost', '设置已保存');
       if (reconnect) restart();
     } else if (path === '/autostart') {
       config.autostart = !!data.on;
       save();
-      note('station', data.on ? '登录 Windows 后自动启动：已开启' : '登录 Windows 后自动启动：已关闭');
+      note('daumhost', data.on ? '登录 Windows 后自动启动：已开启' : '登录 Windows 后自动启动：已关闭');
     } else if (path === '/shortcut') {
       config.shortcut = !!data.on;
       save();
-      note('station', data.on ? '已在桌面和开始菜单中创建「daumhost」快捷方式' : '已删除桌面和开始菜单中的「daumhost」快捷方式');
+      note('daumhost', data.on ? '已在桌面和开始菜单中创建「daumhost」快捷方式' : '已删除桌面和开始菜单中的「daumhost」快捷方式');
     } else if (path === '/clipboard') {
       if (typeof data.on !== 'boolean') throw new Error('on must be boolean');
       config.clipboard = data.on;
@@ -1032,7 +1034,7 @@ const ui = createServer(async (req, res) => {
         clipOutbox = null;
       }
       save();
-      note('station', data.on ? '同步剪贴板：已开启，复制的文字和图片会同步到服务器' : '同步剪贴板：已关闭');
+      note('daumhost', data.on ? '同步剪贴板：已开启，复制的文字和图片会同步到服务器' : '同步剪贴板：已关闭');
     } else if (path === '/theme') {
       if (!['plum', 'cream', 'teal'].includes(data.name)) throw new Error('name must be plum, cream or teal');
       config.theme = data.name;
@@ -1042,7 +1044,7 @@ const ui = createServer(async (req, res) => {
       config.autoUpdate = !!data.on;
       save();
     } else if (path === '/reveal') {
-      // what a job made, opened or shown in its folder (the window of 渲染站.exe asks it itself)
+      // what a job made, opened or shown in its folder (the window of daumhost.exe asks it itself)
       const file = resolve(String(data.path ?? ''));
       if (!file.startsWith(KEEP) || !existsSync(file)) return res.writeHead(404).end();
       const opener = win ? 'explorer.exe' : 'xdg-open';
@@ -1052,19 +1054,19 @@ const ui = createServer(async (req, res) => {
       return quit();
     } else return res.writeHead(404).end();
   } catch (e) {
-    note('station', `请求 ${path} 失败：${e.message}`);
+    note('daumhost', `请求 ${path} 失败：${e.message}`);
     return res.writeHead(400, { 'content-type': 'application/json' }).end(JSON.stringify({ error: e.message }));
   }
   push();
   json(res, view());
 });
-// one station at a time: a second one finds the port taken and goes
+// one daumhost at a time: a second one finds the port taken and goes
 ui.on('error', (e) => {
   if (e.code === 'EADDRINUSE') process.exit(0);
   throw e;
 });
 ui.listen(UI, '127.0.0.1', () => {
-  note('station', `daumhost 已启动${admin ? '（以管理员身份运行）' : ''}，窗口地址：http://127.0.0.1:${UI}`);
+  note('daumhost', `daumhost 已启动${admin ? '（以管理员身份运行）' : ''}，窗口地址：http://127.0.0.1:${UI}`);
   if (installed) clearOld(STAGE);
   // the one job folder of versions before jobs ran side by side
   rmSync(join(dir, 'job'), { recursive: true, force: true });

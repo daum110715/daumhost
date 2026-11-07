@@ -1,14 +1,14 @@
-// Builds 渲染站.exe from station.c with mingw-w64: draws the icons (a dot in each state's colour
+// Builds daumhost.exe from daumhost.c with mingw-w64: draws the icons (a dot in each state's colour
 // with a play mark, as the window's) into .ico files, and puts them in .tools/exe-build/ with the
 // sources, the resources and what it takes of the WebView2 SDK (NuGet's Microsoft.Web.WebView2,
 // unpacked in .tools/webview2/). Then compile.mjs compiles them: on the device, as the preset
-// render-station/exe of its daumhost (the workspace of the station's own folder, with MINGW
+// daumhost/exe of its daumhost (the workspace of daumhost's own folder, with MINGW
 // set), when it is reached and set up so; else here, with the cross compilers. The exe goes to the
-// repository's root with the SDK's WebView2Loader.dll; commit both after changing station.c,
+// repository's root with the SDK's WebView2Loader.dll; commit both after changing daumhost.c,
 // common.h, the resources or the icons. It also builds the installer's program (setup.c) into
 // .tools/exe-build/setup.exe, which release/build.mjs appends a release to; --setup builds that alone.
 // --local: here, whatever the device. --try: then, compiled on the device, starts it there as a
-// trial (渲染站.exe --try: a window of its own on the station running there), once its owner allows
+// trial (daumhost.exe --try: a window of its own on daumhost running there), once its owner allows
 // the Shell command that does.
 // usage: node exe/build.mjs [--setup] [--local] [--try]
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -20,7 +20,7 @@ import { deflateSync } from 'node:zlib';
 const here = fileURLToPath(new URL('.', import.meta.url));
 const repo = join(here, '..');
 const build = join(repo, '.tools/exe-build');
-const out = join(here, '..', '渲染站.exe');
+const out = join(here, '..', 'daumhost.exe');
 const sdk = join(repo, '.tools/webview2/build/native');
 
 // ——— PNG ———
@@ -118,7 +118,7 @@ const TRAY = [16, 20, 24, 32, 40, 48, 64];
 // the program's own icon is the busy one, the accent: big enough for Explorer's large views too
 writeFileSync(join(build, 'busy.ico'), ico('#6a4c9e', [...TRAY, 96, 128, 256]));
 for (const [name, hex] of Object.entries({ idle: '#2a9d80', wait: '#d99a1e', bad: '#d4563a', off: '#9a8a9d' })) writeFileSync(join(build, `${name}.ico`), ico(hex, TRAY));
-for (const f of ['station.c', 'setup.c', 'common.h', 'station.rc', 'setup.rc', 'station.manifest']) copyFileSync(join(here, f), join(build, f));
+for (const f of ['daumhost.c', 'setup.c', 'common.h', 'daumhost.rc', 'setup.rc', 'daumhost.manifest']) copyFileSync(join(here, f), join(build, f));
 copyFileSync(join(sdk, 'include/WebView2.h'), join(build, 'sdk/WebView2.h'));
 // WebView2.h asks for EventToken.h, which mingw-w64 has in lower case: found as it is on Windows,
 // through this here (shim/ is not brought to the device, where it would find itself)
@@ -130,7 +130,7 @@ copyFileSync(join(sdk, 'x64/WebView2Loader.dll'), join(build, 'WebView2Loader.dl
 // there is compiled here instead
 let onDevice = false;
 if (!process.argv.includes('--local')) {
-  const job = spawnSync(process.execPath, [join(repo, 'cli.mjs'), 'run', '--json', '--src', build, '--out', join(build, 'out'), 'render-station/exe', ...(setupOnly ? ['--setup'] : [])], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  const job = spawnSync(process.execPath, [join(repo, 'cli.mjs'), 'run', '--json', '--src', build, '--out', join(build, 'out'), 'daumhost/exe', ...(setupOnly ? ['--setup'] : [])], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   let reply = null;
   try {
     reply = JSON.parse(job.stdout);
@@ -142,22 +142,22 @@ if (!process.argv.includes('--local')) {
   } else if (reply?.exitCode != null) {
     console.error('compiling on the device failed');
     process.exit(1);
-  } else console.log(`compiling here: not on the device (${(reply?.error || job.stderr || `rs run exited with ${job.status}`).trim().split('\n').at(-1)})`);
+  } else console.log(`compiling here: not on the device (${(reply?.error || job.stderr || `daumhost run exited with ${job.status}`).trim().split('\n').at(-1)})`);
 }
 if (!onDevice) execFileSync(process.execPath, [join(here, 'compile.mjs'), build, ...(setupOnly ? ['--setup'] : [])], { stdio: 'inherit' });
 if (!setupOnly) {
-  copyFileSync(join(build, 'out/渲染站.exe'), out);
+  copyFileSync(join(build, 'out/daumhost.exe'), out);
   copyFileSync(join(sdk, 'x64/WebView2Loader.dll'), join(repo, 'WebView2Loader.dll'));
   console.log(out);
 }
 copyFileSync(join(build, 'out/setup.exe'), join(build, 'setup.exe'));
 console.log(join(build, 'setup.exe'));
 
-// the trial: the newest 渲染站.exe the device compiled (kept there with what each job made, beside the
+// the trial: the newest daumhost.exe the device compiled (kept there with what each job made, beside the
 // loader), started with --try, as its owner allows
 if (process.argv.includes('--try')) {
   if (!onDevice || setupOnly) {
-    console.error('--try: only for 渲染站.exe as the device compiled it');
+    console.error('--try: only for daumhost.exe as the device compiled it');
     process.exit(1);
   }
   const start = [
@@ -166,6 +166,6 @@ if (process.argv.includes('--try')) {
     "Start-Process $exe.FullName -ArgumentList '--try'",
     'Write-Output $exe.FullName',
   ].join('; ');
-  const trial = spawnSync(process.execPath, [join(repo, 'cli.mjs'), 'shell', '--workspace', 'render-station', start], { stdio: 'inherit' });
+  const trial = spawnSync(process.execPath, [join(repo, 'cli.mjs'), 'shell', '--workspace', 'daumhost', start], { stdio: 'inherit' });
   process.exit(trial.status ?? 1);
 }

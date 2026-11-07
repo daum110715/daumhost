@@ -1,4 +1,4 @@
-// Headless Chrome (or Edge) over CDP for a job on the station, with a profile deleted on exit. Any project
+// Headless Chrome (or Edge) over CDP for a job on daumhost, with a profile deleted on exit. Any project
 // copies this next to its script for common/node. CHROME: the browser, when not in its usual place.
 // CHROME_PROFILES: where the throwaway profiles go (common/node sets it, off C:). CHROME_GPU=1: draw with the GPU.
 import { spawn } from 'node:child_process';

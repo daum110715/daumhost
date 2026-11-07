@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>daumhost</title>
     <script>
-      // the look chosen last, before anything is drawn (the station's settings say which, once it answers)
+      // the look chosen last, before anything is drawn (daumhost's settings say which, once it answers)
       try {
-        const theme = localStorage.getItem('station-theme');
+        const theme = localStorage.getItem('daumhost-theme');
         document.documentElement.dataset.theme = { cream: 'cream', teal: 'teal', lime: 'teal' }[theme] ?? 'plum';
       } catch {}
     </script>
     <link rel="icon" id="favicon" href="data:," />
-    <!-- daumhost's window (station.mjs serves it, at http://127.0.0.1:7799, in 渲染站.exe's own window or
+    <!-- daumhost's window (daumhost.mjs serves it, at http://127.0.0.1:7799, in daumhost.exe's own window or
          any browser): how the worker and the tunnel to the server are doing and this machine with
          them, what the jobs made, what they print as they print it, and the settings, a page each.
          Light or dark as the system is. -->
@@ -526,7 +526,7 @@
         text-align: center;
       }
 
-      /* ——— the frame: the rail and the page; in 渲染站.exe's window, the title bar's buttons too ——— */
+      /* ——— the frame: the rail and the page; in daumhost.exe's window, the title bar's buttons too ——— */
       .shell {
         display: grid;
         grid-template-columns: var(--rail-w) minmax(0, 1fr);
@@ -731,7 +731,7 @@
         color: inherit;
         opacity: 0.75;
       }
-      /* 渲染站.exe's window has no frame above: its top edge and corners, to size it by */
+      /* daumhost.exe's window has no frame above: its top edge and corners, to size it by */
       .grip i {
         position: fixed;
         z-index: 40;
@@ -850,7 +850,7 @@
       .nav .sub:has(.plate) button[aria-current='page'] {
         background: none;
       }
-      /* the rail's foot: how the station is, as the rail's last line, set as its names are, its dot
+      /* the rail's foot: how daumhost is, as the rail's last line, set as its names are, its dot
          in their icons' column; above it a rule that is also how far (the steps done, the wait
          before trying again), a plain rule while there is no telling */
       .rail-foot {
@@ -1760,7 +1760,7 @@
       .k-ssh {
         --tag: var(--wait);
       }
-      .k-station {
+      .k-daumhost {
         --tag: var(--ok);
       }
       .k-shell {
@@ -2348,7 +2348,7 @@
             <div class="block-head"><h3>最近的任务</h3><span class="sub-line" id="jobs-sub"></span></div>
             <div class="panel">
               <ol class="list" id="jobs"></ol>
-              <p class="empty" id="empty">暂无任务。服务器通过 rs 命令提交的任务会列在这里：单击任务可以查看它的输出，单击「打开」可以查看它生成的文件。</p>
+              <p class="empty" id="empty">暂无任务。服务器通过 daumhost 命令提交的任务会列在这里：单击任务可以查看它的输出，单击「打开」可以查看它生成的文件。</p>
             </div>
           </section>
           <p class="foot">关闭此窗口后，daumhost 仍在后台运行。如需退出，请右键单击任务栏通知区域中的 daumhost 图标。</p>
@@ -2413,7 +2413,7 @@
         <section class="page" id="page-workspaces" data-group="settings" hidden>
           <div class="tabs-narrow"></div>
           <div class="page-head"><h2>工作区</h2><span class="sub-line" id="ws-sub"></span></div>
-          <p class="lede">任务只在已登记的工作区中运行。工作区根目录下的 render-station.json 规定它需要哪些设置、提供哪些预设任务；登记工作区，即表示信任它的预设任务。</p>
+          <p class="lede">任务只在已登记的工作区中运行。工作区根目录下的 daumhost.json 规定它需要哪些设置、提供哪些预设任务；登记工作区，即表示信任它的预设任务。</p>
           <div id="ws-list"></div>
           <div class="panel add-panel">
             <button type="button" id="ws-add">添加工作区</button>
@@ -2423,7 +2423,7 @@
                   <label class="field"><span>名称</span><input type="text" id="ws-new-name" placeholder="可留空" spellcheck="false" autocomplete="off" /></label>
                   <label class="field"><span>路径</span><input type="text" id="ws-new-path" placeholder="D:\projects\…" spellcheck="false" autocomplete="off" /></label>
                 </div>
-                <p class="hint" style="margin: 0">名称留空时，使用 render-station.json 中的名称，再没有就用文件夹名。如果该文件夹中留有旧版 daumhost 的设置，会自动导入。</p>
+                <p class="hint" style="margin: 0">名称留空时，使用 daumhost.json 中的名称，再没有就用文件夹名。如果该文件夹中留有旧版 daumhost 的设置，会自动导入。</p>
                 <div class="acts">
                   <button type="button" class="primary" id="ws-new-add">添加</button>
                   <button type="button" id="ws-new-cancel">取消</button>
@@ -2447,7 +2447,7 @@
               </div>
             </div>
             <label class="row">
-              <span class="text"><b>同步剪贴板</b><small>在这台电脑上复制的文字和图片，约 1 秒内同步到服务器的 <code>~/.render-station/clipboard/</code>；服务器也可以写入这台电脑的剪贴板。密码管理器标记为敏感的内容和超过 20 MB 的内容不同步。不弹出通知，只在「动态」和日志中记录。</small><small id="clip-last"></small><small class="err" id="clip-error" role="alert"></small></span>
+              <span class="text"><b>同步剪贴板</b><small>在这台电脑上复制的文字和图片，约 1 秒内同步到服务器的 <code>~/.daumhost/clipboard/</code>；服务器也可以写入这台电脑的剪贴板。密码管理器标记为敏感的内容和超过 20 MB 的内容不同步。不弹出通知，只在「动态」和日志中记录。</small><small id="clip-last"></small><small class="err" id="clip-error" role="alert"></small></span>
               <input type="checkbox" id="clipboard" role="switch" />
             </label>
           </div>
@@ -2485,7 +2485,7 @@
               </div>
             </div>
             <div class="row">
-              <div class="text"><b>同时运行的任务数</b><small>超出的任务排队等候。同一工作区的预设任务默认一次只运行一个，工作区可在 render-station.json 中用 parallel 放宽。</small></div>
+              <div class="text"><b>同时运行的任务数</b><small>超出的任务排队等候。同一工作区的预设任务默认一次只运行一个，工作区可在 daumhost.json 中用 parallel 放宽。</small></div>
               <div class="ctl">
                 <span class="seg"><button type="button" id="par-dec" aria-label="减少">−</button><b class="num" id="par-n">2</b><button type="button" id="par-inc" aria-label="增加">+</button></span>
               </div>
@@ -2520,7 +2520,7 @@
               <div class="ctl"><button type="button" id="log-open" hidden>打开日志</button></div>
             </div>
           </div>
-          <p class="hint">源代码：github.com/daum110715/render-station，MIT 许可。</p>
+          <p class="hint">源代码：github.com/daum110715/daumhost，MIT 许可。</p>
         </section>
       </main>
     </div>
@@ -2585,7 +2585,7 @@
       let page0 = null;
       const open = new Set();
       const flying = new Set();
-      // in 渲染站.exe's window: its title bar is this page's, and it opens what a job made
+      // in daumhost.exe's window: its title bar is this page's, and it opens what a job made
       const host = window.chrome?.webview;
       const reveal = (path, show = false) => (host ? host.postMessage(`${show ? 'show' : 'open'}\t${path}`) : post('/reveal', { path, show }));
 
@@ -2776,15 +2776,15 @@
           knob.style.transition = '';
         }
       }
-      /** a change asked of the station: whether it was made */
+      /** a change asked of daumhost: whether it was made */
       const post = (path, body) =>
-        fetch(path, { method: 'POST', headers: { 'x-station': '1', 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : '' })
+        fetch(path, { method: 'POST', headers: { 'x-daumhost': '1', 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : '' })
           .then((r) => (r.ok ? r.json() : Promise.reject()))
           .then((data) => (render(data), true))
           .catch(() => false);
       /** a change the page asks: the state it leaves, or why not (thrown) */
       async function change(path, body, token = false) {
-        const response = await fetch(path, { method: 'POST', headers: { 'x-station': '1', 'content-type': 'application/json', ...(token ? { 'x-shell-local': shellToken } : {}) }, body: JSON.stringify(body) });
+        const response = await fetch(path, { method: 'POST', headers: { 'x-daumhost': '1', 'content-type': 'application/json', ...(token ? { 'x-shell-local': shellToken } : {}) }, body: JSON.stringify(body) });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error ?? (response.status === 403 && token ? 'daumhost 拒绝了这个请求：窗口的授权已失效，请重新打开窗口后再试' : `HTTP ${response.status}`));
         render(data);
@@ -2887,7 +2887,7 @@
         }
         $('#main').scrollTop = 0;
         try {
-          localStorage.setItem('station-page', name);
+          localStorage.setItem('daumhost-page', name);
         } catch {}
         // in a browser, the address says the page too (#gallery…)
         history.replaceState(null, '', name === 'home' ? location.pathname : `#${name}`);
@@ -2943,7 +2943,7 @@
         const text = {
           gone: ['未运行', '后台进程已停止', '托盘程序会在几秒内自动重启它。如果任务栏通知区域中也没有 daumhost，请双击桌面上的「daumhost」。'],
           busy: j ? ['执行中', j.what, `${clock(j.started)} 开始，已运行 ${took(now - j.started)}${waiting}。`] : ['执行中', `正在执行 ${many} 个任务`, `各任务的进度见下方「运行中」${waiting}。`],
-          idle: ['空闲', '等待服务器提交任务', `已连接服务器，隧道于 ${t.since ? clock(t.since) : ''} 建立。服务器通过 rs 命令提交的任务会在这台电脑上运行。`],
+          idle: ['空闲', '等待服务器提交任务', `已连接服务器，隧道于 ${t.since ? clock(t.since) : ''} 建立。服务器通过 daumhost 命令提交的任务会在这台电脑上运行。`],
           connecting: ['连接中', '正在连接服务器', `ssh ${target}`],
           retry: ['重连中', '无法连接服务器', t.message || '网络中断，或这台电脑刚从睡眠中唤醒。daumhost 会自动重新连接。'],
           auth: ['登录失败', '无法登录服务器', `${t.message ? `${t.message}。` : ''}自动连接须使用无需密码的密钥登录：请在终端中运行 ssh ${target}，确认无需输入密码即可登录，然后单击「重新连接」。`],
@@ -3082,7 +3082,7 @@
         }
         clipShown = now;
         bar.className = `clip-bar${g ? ' going' : w ? ' wait' : l?.ok === false ? ' bad' : ''}`;
-        let left = '还没有同步过内容。在这台电脑上复制文字或图片，会同步到服务器的 ~/.render-station/clipboard/。';
+        let left = '还没有同步过内容。在这台电脑上复制文字或图片，会同步到服务器的 ~/.daumhost/clipboard/。';
         let right = '';
         let width = 0;
         if (g) {
@@ -3155,7 +3155,7 @@
         if (m.gpu) chart($('#c-gpu'), m.gpu, m.gpuName ?? '');
       }
 
-      // ——— as administrator: 渲染站.exe asks at each start, unless the switch is off; started again
+      // ——— as administrator: daumhost.exe asks at each start, unless the switch is off; started again
       // so from its window alone, as it asks Windows' User Account Control ———
       function renderElevate() {
         const e = S.elevate;
@@ -3429,7 +3429,7 @@
       box.addEventListener('click', (e) => {
         if (e.target === box || e.target.id === 'lb-stage') closeBox();
       });
-      // the window closed (渲染站.exe hides it a while): a video playing in it stops
+      // the window closed (daumhost.exe hides it a while): a video playing in it stops
       document.addEventListener('visibilitychange', () => document.hidden && box.querySelector('video')?.pause());
       addEventListener('keydown', (e) => {
         if (box.hidden) return;
@@ -3443,7 +3443,7 @@
       const lines = [];
       let filter = 'all';
       const KINDS = { job: ['job', 'out', 'shell'], tunnel: ['tunnel', 'ssh'] };
-      const TAGS = { job: '任务', tunnel: '连接', station: 'daumhost', shell: 'Shell' };
+      const TAGS = { job: '任务', tunnel: '连接', daumhost: 'daumhost', shell: 'Shell' };
       const shows = (item) => !KINDS[filter] || KINDS[filter].includes(item.kind);
       // a job's progress ("progress n/total"), one line rewritten
       const progress = (item) => item?.kind === 'out' && /^(?:progress|frame) \d+\/\d+/.test(item.text);
@@ -3618,7 +3618,7 @@
           return input;
         };
         const pair = el('div', 'pair wide');
-        const name = text(w.name, '留空时使用 render-station.json 中的名称');
+        const name = text(w.name, '留空时使用 daumhost.json 中的名称');
         name.dataset.k = 'name';
         const path = text(w.path, 'D:\\projects\\…');
         path.dataset.k = 'path';
@@ -3670,7 +3670,7 @@
               ul.append(li);
             }
             presets.append(ul);
-          } else presets.append(el('p', 'hint', '该文件夹中没有 render-station.json，只能运行 Shell 任务。'));
+          } else presets.append(el('p', 'hint', '该文件夹中没有 daumhost.json，只能运行 Shell 任务。'));
           fields.append(presets);
         }
         body.append(fields);
@@ -3939,7 +3939,7 @@
         set('ws-review-from', browse ? '查看文件夹，等待你的批准' : `工作区 ${q.name}，等待你的批准`);
         set('ws-review-lines', browse ? (q.path ?? '这台电脑的磁盘列表') : q.lines.join('\n'));
         $('#ws-review-presets').hidden = browse || q.action === 'remove';
-        set('ws-review-presets', browse ? '' : q.presets.length ? `该文件夹的 render-station.json 提供这些预设任务：${q.presets.join('、')}。` : '该文件夹中没有预设任务。');
+        set('ws-review-presets', browse ? '' : q.presets.length ? `该文件夹的 daumhost.json 提供这些预设任务：${q.presets.join('、')}。` : '该文件夹中没有预设任务。');
         set(
           'ws-review-note',
           browse
@@ -3995,7 +3995,7 @@
           t.finished.finally(() => root.classList.remove('reveal'));
         }
         try {
-          localStorage.setItem('station-theme', theme);
+          localStorage.setItem('daumhost-theme', theme);
         } catch {}
       }
       // a colour of the page's as rrggbb
@@ -4009,7 +4009,7 @@
         const n = said.match(/[\d.]+/g)?.map(Number) ?? [0, 0, 0];
         return n.slice(0, 3).map((v) => Math.round(said.startsWith('color(') ? v * 255 : v).toString(16).padStart(2, '0')).join('');
       }
-      /** 渲染站.exe told the look, for the window round the page: its ground (under it while it loads
+      /** daumhost.exe told the look, for the window round the page: its ground (under it while it loads
        *  and is sized), its edge, light or dark; and the states' colours, for its icons (the tray's,
        *  the window's) as the logo here */
       function tellLook() {
@@ -4028,7 +4028,7 @@
         if (!S) return;
         applyTheme();
         S0 = true;
-        // the page changed on disk (an update), or the station that served it started again (for
+        // the page changed on disk (an update), or daumhost that served it started again (for
         // administrator rights, say) and its token with it: this one again, as it is now
         const served = `${S.page} ${S.boot}`;
         if (page0 == null) page0 = served;
@@ -4057,13 +4057,13 @@
         if (S.missing.length) show(S.config.ssh.target ? 'workspaces' : 'connection');
       }
 
-      // ——— in 渲染站.exe's window: its title bar, and what it says back ———
+      // ——— in daumhost.exe's window: its title bar, and what it says back ———
       if (host) {
         document.documentElement.classList.add('framed');
         $('#titlebar').hidden = false;
         $('#in-browser').hidden = false;
         // pressed on the bar, or on the rail where nothing is: the window moves, as by a title bar
-        // (pressed twice, as a double click, it is maximized or restored: 渲染站.exe tells which)
+        // (pressed twice, as a double click, it is maximized or restored: daumhost.exe tells which)
         for (const area of [$('#drag'), $('#rail')])
           area.addEventListener('mousedown', (e) => {
             if (e.button === 0 && !e.target.closest('button, input, a, label')) host.postMessage('drag');
@@ -4120,12 +4120,12 @@
 
       let first = fromHash() || 'home';
       try {
-        if (!location.hash) first = localStorage.getItem('station-page') || 'home';
+        if (!location.hash) first = localStorage.getItem('daumhost-page') || 'home';
       } catch {}
       show(first);
 
       const events = new EventSource('/events');
-      // the station sends its whole feed on each connection
+      // daumhost sends its whole feed on each connection
       events.onopen = () => {
         lines.length = 0;
         lastOf.clear();

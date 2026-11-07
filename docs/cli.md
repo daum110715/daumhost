@@ -2,7 +2,7 @@
 
 English | [中文](cli.zh-CN.md)
 
-`daumhost` (also `rs` and `render-station`, the older names) is the command-line tool on the server. It submits jobs to the device and manages the device's workspaces. Its short name is `daumhost`. For the terms used here (server, device, workspace, preset) and for setting up the device, see the [README](../README.md).
+`daumhost` is the command-line tool on the server. It submits jobs to the device and manages the device's workspaces. Its short name is `daumhost`. For the terms used here (server, device, workspace, preset) and for setting up the device, see the [README](../README.md).
 
 ## Installation
 
@@ -12,7 +12,7 @@ The server needs Node.js 18 or later and a checkout of this repository. Run this
 npm link
 ```
 
-This installs the commands `daumhost`, `render-station` and `daumhost` into npm's global `bin` folder; that folder must be on `PATH`. The commands keep pointing at the checkout, so `git pull` updates them too. Without `npm link`, run `node /path/to/render-station/cli.mjs` instead; it behaves the same.
+This installs the commands `daumhost`, `daumhost` and `daumhost` into npm's global `bin` folder; that folder must be on `PATH`. The commands keep pointing at the checkout, so `git pull` updates them too. Without `npm link`, run `node /path/to/daumhost/cli.mjs` instead; it behaves the same.
 
 ## Commands
 
@@ -33,7 +33,7 @@ This installs the commands `daumhost`, `render-station` and `daumhost` into npm'
 - `-h` and `--help`: show the command's help. `daumhost help <command>` does the same.
 - Option placement: for `run` and `shell`, options come before the preset or the command, because what follows is passed on as arguments or as the command. Other commands take options anywhere. `--` ends the options.
 - Progress messages, such as a job's place in the queue or a wait for approval, go to standard error and are left out with `--json`.
-- The device is reached through the tunnel on ports 7700–7709 of the server. The command tries them in turn and uses the first one where daumhost answers. Set `RENDER_STATION_PORT` to use only that port.
+- The device is reached through the tunnel on ports 7700–7709 of the server. The command tries them in turn and uses the first one where daumhost answers. Set `DAUMHOST_PORT` to use only that port.
 - Paths on the device are full paths. Write them with forward slashes, as in `F:/projects/site`, or quote them when they use backslashes: `'F:\projects\site'`.
 
 ## status
@@ -80,7 +80,7 @@ Runs a preset on the device and waits for it to end.
 
 - Everything after `<workspace>/<preset>` is passed to the preset as arguments. The device refuses arguments the preset does not accept.
 - `--src`: the folder in which the preset's `upload` globs are matched; defaults to the current folder. The files brought may total at most 48 MB.
-- `--out`: where the returned files are saved; defaults to `.tools/results/<time>/` in the render-station checkout. Returned files may total at most 128 MB.
+- `--out`: where the returned files are saved; defaults to `.tools/results/<time>/` in daumhost checkout. Returned files may total at most 128 MB.
 - When the device already runs as many jobs as it allows, the job waits in the queue and the command reports how many jobs are ahead. Interrupting the command, or losing the connection, cancels the job, whether it is waiting or running.
 - The command prints the last 20 lines of the job's output, the paths of the returned files and the elapsed time.
 
@@ -136,7 +136,7 @@ daumhost workspace remove <name> [--json]
 
 Without an action, or with `list`, lists the workspaces as `status` does. The other actions change them:
 
-- `add` registers a folder as a workspace. When the folder holds an old station's `.tools/remote/config.json`, the settings there that the workspace file declares are imported.
+- `add` registers a folder as a workspace. When the folder holds an old daumhost's `.tools/remote/config.json`, the settings there that the workspace file declares are imported.
 - `set` changes a workspace's path or settings. `--env NAME=` (an empty value) clears a setting, as `--unset NAME` does.
 - `remove` unregisters a workspace. Its folder is left as it is.
 - `--create`: make the folder if it does not exist yet. Without it, a missing folder is an error.
@@ -182,7 +182,7 @@ daumhost clip ls [--json]
 daumhost clip set [<text…>] [--file <path>] [--json]
 ```
 
-While the device has 同步剪贴板 (Sync clipboard) on, text and pictures copied there are written to `~/.render-station/clipboard/` on the server by themselves; see "Clipboard sync" in the README. `daumhost clip` and `xclip` look in that account's home and in `$HOME`, when it differs, and read what came last.
+While the device has 同步剪贴板 (Sync clipboard) on, text and pictures copied there are written to `~/.daumhost/clipboard/` on the server by themselves; see "Clipboard sync" in the README. `daumhost clip` and `xclip` look in that account's home and in `$HOME`, when it differs, and read what came last.
 
 - `daumhost clip`: prints the newest. Text as it is; for a picture, the path of its PNG.
 - `daumhost clip ls`: lists the last 50, newest first, with the time, type, size, path and the start of the text.
@@ -236,7 +236,7 @@ The device's setting 服务器管理工作区 (Server manages workspaces) decide
 |---|---|
 | 0 | Done. |
 | The job's own | A job ran and failed. |
-| 1 | The request failed without running: an argument the preset does not accept, a denied or expired approval, a refused workspace change, a folder that cannot be listed, a station too old for the command. |
+| 1 | The request failed without running: an argument the preset does not accept, a denied or expired approval, a refused workspace change, a folder that cannot be listed, a daumhost too old for the command. |
 | 2 | The command was used incorrectly. |
 | 3 | The device was not reached, daumhost is paused, or too many jobs already wait. |
 

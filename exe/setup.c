@@ -1,10 +1,10 @@
-// The installer, render-station-setup-<version>.exe: this program with a release appended (a gzipped
-// tar of all an installed copy holds: the station, its window's fonts, Node.js, the signed
+// The installer, daumhost-setup-<version>.exe: this program with a release appended (a gzipped
+// tar of all an installed copy holds: daumhost, its window's fonts, Node.js, the signed
 // release.json), then the version, the tar's size and a mark. Once the owner agrees, it has a running
-// station quit, unpacks the tar into
-// %LOCALAPPDATA%\Programs\render-station\ with Windows' own tar.exe, brings over the settings of a
-// station set up before, adds the station to Windows' installed apps (渲染站.exe --uninstall removes
-// it) and starts it. Per user: no administrator is needed, and the station updates itself there.
+// daumhost quit, unpacks the tar into
+// %LOCALAPPDATA%\Programs\daumhost\ with Windows' own tar.exe, takes over from the install under
+// the old name (0.8.0 only), adds daumhost to Windows' installed apps (daumhost.exe --uninstall removes
+// it) and starts it. Per user: no administrator is needed, and daumhost updates itself there.
 // Built by exe/build.mjs; release/build.mjs appends the release.
 #ifndef UNICODE
 #define UNICODE
@@ -121,30 +121,47 @@ static int unpack(void) {
   return !code;
 }
 
-/** the settings of a station set up before, if this copy has none: those of one run from a checkout of
- *  its own; found by what starts it with Windows */
-static void bringSettings(void) {
-  wchar_t mine[MAX_PATH + 64], folder[MAX_PATH + 32];
+
+/** for 0.8.0 only: what the install under the old name left, gone, its .tools (the settings, the
+ *  history) moved here first; left alone if they could not be */
+static void leaveOldName(void) {
+  wchar_t base[MAX_PATH], old[MAX_PATH + 64], from[MAX_PATH + 72], to[MAX_PATH + 32], conf[MAX_PATH + 96], mine[MAX_PATH + 64], lnk[MAX_PATH + 32], folder[MAX_PATH];
+  if (!GetEnvironmentVariableW(L"LOCALAPPDATA", base, MAX_PATH)) return;
+  FMT(old, L"%ls\\Programs\\render-station", base);
+  FMT(from, L"%ls\\.tools", old);
+  FMT(to, L"%ls\\.tools", dir);
   FMT(mine, L"%ls\\.tools\\remote\\config.json", dir);
-  if (isFile(mine)) return;
-  wchar_t v[MAX_PATH * 2], theirs[MAX_PATH * 2 + 64];
-  DWORD size = sizeof v;
-  if (RegGetValueW(HKEY_CURRENT_USER, RUN_KEY, RUN_NAME, RRF_RT_REG_SZ, NULL, v, &size) != ERROR_SUCCESS) return;
-  // "<folder>\渲染站.exe" /quiet: the folder
-  wchar_t *p = v;
-  if (*p == L'"') {
-    p++;
-    wchar_t *q = wcschr(p, L'"');
-    if (q) *q = 0;
+  if (GetFileAttributesW(from) != INVALID_FILE_ATTRIBUTES) {
+    int moved = 0;
+    for (int i = 0; i < 10 && !moved; i++) {
+      moved = GetFileAttributesW(to) == INVALID_FILE_ATTRIBUTES && MoveFileW(from, to);
+      if (!moved) Sleep(1000);
+    }
+    if (!moved && !isFile(mine)) {
+      FMT(conf, L"%ls\\remote\\config.json", from);
+      FMT(to, L"%ls\\.tools\\remote", dir);
+      SHCreateDirectoryExW(NULL, to, NULL);
+      if (!CopyFileW(conf, mine, TRUE)) return;
+    }
   }
-  wchar_t *cut = wcsrchr(p, L'\\');
-  if (cut) *cut = 0;
-  if (!_wcsicmp(p, dir)) return;
-  FMT(theirs, L"%ls\\.tools\\remote\\config.json", p);
-  if (!isFile(theirs)) return;
-  FMT(folder, L"%ls\\.tools\\remote", dir);
-  SHCreateDirectoryExW(NULL, folder, NULL);
-  CopyFileW(theirs, mine, TRUE);
+  for (int i = 0; i < 5 && GetFileAttributesW(old) != INVALID_FILE_ATTRIBUTES; i++) {
+    removeTree(old);
+    Sleep(1000);
+  }
+  FMT(old, L"%ls\\render-station", base);
+  for (int i = 0; i < 5 && GetFileAttributesW(old) != INVALID_FILE_ATTRIBUTES; i++) {
+    removeTree(old);
+    Sleep(1000);
+  }
+  RegDeleteKeyValueW(HKEY_CURRENT_USER, RUN_KEY, L"渲染站");
+  RegDeleteTreeW(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\render-station");
+  RegDeleteTreeW(HKEY_CURRENT_USER, L"Software\\render-station");
+  const int where[] = { CSIDL_DESKTOPDIRECTORY, CSIDL_PROGRAMS };
+  for (int i = 0; i < 2; i++) {
+    if (SHGetFolderPathW(NULL, where[i], NULL, 0, folder) != S_OK) continue;
+    FMT(lnk, L"%ls\\渲染站.lnk", folder);
+    DeleteFileW(lnk);
+  }
 }
 
 static void setString(HKEY k, const wchar_t *name, const wchar_t *value) {
@@ -153,15 +170,15 @@ static void setString(HKEY k, const wchar_t *name, const wchar_t *value) {
 static void setNumber(HKEY k, const wchar_t *name, DWORD value) {
   RegSetValueExW(k, name, 0, REG_DWORD, (const BYTE *)&value, sizeof value);
 }
-/** the station in Windows' installed apps, with its uninstaller */
+/** daumhost in Windows' installed apps, with its uninstaller */
 static void registerApp(void) {
   HKEY k;
   if (RegCreateKeyExW(HKEY_CURRENT_USER, UNINSTALL_KEY, 0, NULL, 0, KEY_SET_VALUE, NULL, &k, NULL) != ERROR_SUCCESS) return;
   wchar_t icon[MAX_PATH + 32], remove[MAX_PATH + 48], date[16];
   SYSTEMTIME t;
   GetLocalTime(&t);
-  FMT(icon, L"%ls\\渲染站.exe,0", dir);
-  FMT(remove, L"\"%ls\\渲染站.exe\" --uninstall", dir);
+  FMT(icon, L"%ls\\daumhost.exe,0", dir);
+  FMT(remove, L"\"%ls\\daumhost.exe\" --uninstall", dir);
   FMT(date, L"%04u%02u%02u", t.wYear, t.wMonth, t.wDay);
   setString(k, L"DisplayName", L"daumhost");
   setString(k, L"DisplayVersion", version);
@@ -169,7 +186,7 @@ static void registerApp(void) {
   setString(k, L"DisplayIcon", icon);
   setString(k, L"InstallLocation", dir);
   setString(k, L"UninstallString", remove);
-  setString(k, L"URLInfoAbout", L"https://github.com/daum110715/render-station");
+  setString(k, L"URLInfoAbout", L"https://github.com/daum110715/daumhost");
   setString(k, L"InstallDate", date);
   setNumber(k, L"NoModify", 1);
   setNumber(k, L"NoRepair", 1);
@@ -186,7 +203,7 @@ static DWORD WINAPI work(LPVOID unused) {
   if (made != ERROR_SUCCESS && made != ERROR_ALREADY_EXISTS) fail(L"无法创建安装目录（错误代码 %d）：\n%ls", made, dir);
   else if (!writePayload(archive)) fail(L"无法写入安装数据（错误代码 %lu）。", GetLastError());
   else if (unpack()) {
-    bringSettings();
+    leaveOldName();
     registerApp();
   }
   DeleteFileW(archive);
@@ -226,7 +243,7 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE prev, PWSTR args, int how) {
     MessageBoxW(NULL, L"无法确定当前用户的应用数据目录（LOCALAPPDATA）。", TITLE, MB_ICONERROR);
     return 1;
   }
-  FMT(dir, L"%ls\\Programs\\render-station", base);
+  FMT(dir, L"%ls\\Programs\\daumhost", base);
   if (!findPayload()) {
     MessageBoxW(NULL, L"安装程序不完整，找不到安装数据。请重新下载安装程序。", TITLE, MB_ICONERROR);
     return 1;
@@ -236,7 +253,7 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE prev, PWSTR args, int how) {
   wchar_t check[MAX_PATH + 32], heading[96], content[MAX_PATH + 256];
   FMT(check, L"%ls\\release.json", dir);
   int updating = isFile(check);
-  int running = stationRunning();
+  int running = daumhostRunning();
   FMT(heading, updating ? L"将 daumhost 更新到 %ls" : L"安装 daumhost %ls", version);
   FMT(content, L"安装位置：%ls\n\ndaumhost 按当前用户安装，无需管理员权限。安装完成后将自动启动。%ls", dir, running ? L"\n\n正在运行的 daumhost 将被关闭。" : L"");
   TASKDIALOG_BUTTON go[] = { { IDOK, updating ? L"更新" : L"安装" } };
@@ -253,8 +270,8 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE prev, PWSTR args, int how) {
   int pressed = 0;
   if (FAILED(TaskDialogIndirect(&ask, &pressed, NULL, NULL)) || pressed != IDOK) return 0;
 
-  // ——— the station that runs, quit; then the work, shown going ———
-  while (stationRunning() && !stopStation())
+  // ——— daumhost that runs, quit; then the work, shown going ———
+  while (daumhostRunning() && !stopDaumhost())
     if (MessageBoxW(NULL, L"无法关闭正在运行的 daumhost。请从托盘菜单退出 daumhost，然后单击「重试」。", TITLE, MB_RETRYCANCEL | MB_ICONWARNING) != IDRETRY) return 1;
   TASKDIALOGCONFIG doing = { sizeof doing };
   doing.hInstance = inst;
@@ -272,10 +289,10 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE prev, PWSTR args, int how) {
   }
 
   // ——— and started: its window opens ———
-  wchar_t station[MAX_PATH + 32];
-  FMT(station, L"%ls\\渲染站.exe", dir);
-  if ((INT_PTR)ShellExecuteW(NULL, L"open", station, NULL, dir, SW_SHOWNORMAL) <= 32) {
-    FMT(content, L"daumhost %ls 已安装，但未能自动启动。请从开始菜单或以下位置启动：\n%ls", version, station);
+  wchar_t daumhost[MAX_PATH + 32];
+  FMT(daumhost, L"%ls\\daumhost.exe", dir);
+  if ((INT_PTR)ShellExecuteW(NULL, L"open", daumhost, NULL, dir, SW_SHOWNORMAL) <= 32) {
+    FMT(content, L"daumhost %ls 已安装，但未能自动启动。请从开始菜单或以下位置启动：\n%ls", version, daumhost);
     MessageBoxW(NULL, content, TITLE, MB_ICONWARNING);
   }
   return 0;

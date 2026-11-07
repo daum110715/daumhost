@@ -12,7 +12,7 @@ import { gunzipSync } from 'node:zlib';
 import { safeRel } from './workspace.mjs';
 
 /** where the releases are published */
-export const SERVER = 'https://8.137.206.169/assets/render-station/';
+export const SERVER = 'https://8.137.206.169/assets/daumhost/';
 /** the release key's public half: only what it signed is installed */
 export const KEY = `-----BEGIN PUBLIC KEY-----
 MCowBQYDK2VwAyEAZIbkSxZl+TY3+xmBjhvyG0+1uOZ8R/8ePeMRd/56ZgY=
@@ -43,7 +43,7 @@ export function openRelease(text, key = KEY) {
   if (typeof manifest !== 'string' || typeof signature !== 'string') throw new Error('release: no manifest or signature');
   if (!verify(null, Buffer.from(manifest), createPublicKey(key), Buffer.from(signature, 'base64'))) throw new Error('release: not signed with the release key');
   const m = JSON.parse(manifest);
-  if (m?.name !== 'render-station' || !/^\d+\.\d+\.\d+$/.test(m.version ?? '') || !m.files || typeof m.files !== 'object') throw new Error('release: not a render-station release');
+  if (m?.name !== 'daumhost' || !/^\d+\.\d+\.\d+$/.test(m.version ?? '') || !m.files || typeof m.files !== 'object') throw new Error('release: not a daumhost release');
   for (const [path, f] of Object.entries(m.files))
     if (!safeRel(path) || path === RELEASE || !/^[0-9a-f]{64}$/.test(f?.sha256 ?? '') || !Number.isSafeInteger(f.size) || f.size < 0) throw new Error(`release: a file listed wrongly: ${path}`);
   return m;

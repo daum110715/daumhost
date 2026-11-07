@@ -1,26 +1,26 @@
-// 渲染站.exe, daumhost's tray icon on the Windows machine that takes the server's heavy
-// work, and what its owner double-clicks. It starts the station (station.mjs, with node) with no
+// daumhost.exe, daumhost's tray icon on the Windows machine that takes the server's heavy
+// work, and what its owner double-clicks. It starts daumhost (daumhost.mjs, with node) with no
 // window at all, starts it again whenever it stops, and shows in its colour how it is doing (green
-// waiting, purple at work, amber connecting, red stuck, grey paused); a click opens the station's window: a
-// window of its own with no frame but the page's (station.html in WebView2, through
+// waiting, purple at work, amber connecting, red stuck, grey paused); a click opens daumhost's window: a
+// window of its own with no frame but the page's (daumhost.html in WebView2, through
 // WebView2Loader.dll beside it), or failing that Edge's app window. The page drags it, minimizes
 // and closes it, and opens what a job made, by messages. It keeps what the settings ask for: starting with
 // Windows (a value under HKCU\...\Run, so it shows in Task Manager's startup apps) and daumhost on
-// the desktop and in the Start menu. The station and all it starts (ssh, the jobs and what they
+// the desktop and in the Start menu. daumhost and all it starts (ssh, the jobs and what they
 // start) run in a job object, so quitting, or this ending any other way, ends them too. Only one
-// runs: a second one opens the window and goes. It stays in the checkout beside station.mjs, but runs
-// from a copy of itself in %LOCALAPPDATA%\render-station\ (it copies itself there, with the
+// runs: a second one opens the window and goes. It stays in the checkout beside daumhost.mjs, but runs
+// from a copy of itself in %LOCALAPPDATA%\daumhost\ (it copies itself there, with the
 // loader, and starts the copy), so the checkout's file is never held and an update can replace it;
-// when the station has updated it, the copy starts the checkout's again (--after) and goes. In a
+// when daumhost has updated it, the copy starts the checkout's again (--after) and goes. In a
 // copy the installer put in place (release.json beside it) it runs the Node.js that came with it
-// (node\node.exe), and --uninstall removes that copy and all the station told Windows.
+// (node\node.exe), and --uninstall removes that copy and all daumhost told Windows.
 // It asks Windows' User Account Control at each start to run as administrator (unless the overview
 // page's switch said not to: .tools\remote\no-elevate in the checkout), and runs as it is if the
 // owner says no; the page can have it start again as administrator later.
-// --try: a trial of a new build beside the station running here, as exe/build.mjs --try starts it on
-// the device: its window on that station's page, with an icon of its own to open it again, and
-// nothing else of a station's (no node, no settings kept, no User Account Control); its log and
-// WebView2's data in %LOCALAPPDATA%\render-station\try. A trial started again has the one before go
+// --try: a trial of a new build beside daumhost running here, as exe/build.mjs --try starts it on
+// the device: its window on that daumhost's page, with an icon of its own to open it again, and
+// nothing else of a daumhost's (no node, no settings kept, no User Account Control); its log and
+// WebView2's data in %LOCALAPPDATA%\daumhost\try. A trial started again has the one before go
 // first; one whose window has been closed for five minutes goes by itself.
 // Built with mingw-w64, on the device or on Linux: node exe/build.mjs
 // (-municode defines them too)
@@ -53,13 +53,11 @@
 #define UI_PORT 7799
 #define WM_TRAY (WM_APP + 1)
 #define TITLE L"daumhost"
-// a trial's names, which no station looks for
-#define TRY_CLASS L"RenderStationTry"
-#define TRY_MUTEX L"Local\\render-station-try"
-// the task in Task Scheduler that 0.5.0 made to start it as administrator, removed
-#define ELEVATE_TASK L"RenderStation"
+// a trial's names, which no daumhost looks for
+#define TRY_CLASS L"DaumHostTry"
+#define TRY_MUTEX L"Local\\daumhost-try"
 // where the window was, and whether maximized: it opens there again
-#define PLACE_KEY L"Software\\render-station"
+#define PLACE_KEY L"Software\\daumhost"
 // a closed window is hidden, and let go five minutes on: opened again before, it shows at once
 #define DISPOSE_MS (5 * 60 * 1000)
 enum { CMD_OPEN = 1, CMD_TOGGLE, CMD_RECONNECT, CMD_BROWSER, CMD_LOG, CMD_QUIT };
@@ -68,7 +66,7 @@ enum { TIMER_RETRY = 2, TIMER_WATCH, TIMER_DISPOSE };
 #define WM_GIVE_UP (WM_APP + 2)
 // the page's word to start again as administrator
 #define WM_ELEVATE (WM_APP + 3)
-// the icons, as station.rc numbers them less one
+// the icons, as daumhost.rc numbers them less one
 enum { ICON_BUSY, ICON_IDLE, ICON_WAIT, ICON_BAD, ICON_OFF, ICONS };
 
 // wide formatting that always ends the string
@@ -82,7 +80,7 @@ static NOTIFYICONDATAW nid;
 static HICON icons[ICONS], bigIcons[ICONS];
 static int iconNow = ICON_OFF;
 static wchar_t exePath[MAX_PATH], exeDir[MAX_PATH], repo[MAX_PATH], nodePath[MAX_PATH];
-// the checkout's 渲染站.exe: what the shortcuts and starting with Windows start
+// the checkout's daumhost.exe: what the shortcuts and starting with Windows start
 static wchar_t launcher[MAX_PATH];
 static void again(void);
 static void leave(void);
@@ -115,7 +113,7 @@ static struct {
   DWORD toned;
 } look;
 static wchar_t logPath[MAX_PATH + 64];
-// a line in the station's log (station.log, beside station.mjs's own): how the window went
+// a line in daumhost's log (daumhost.log, beside daumhost.mjs's own): how the window went
 static void say(const wchar_t *fmt, ...) {
   if (!logPath[0]) return;
   wchar_t text[600];
@@ -144,7 +142,7 @@ static int isFile(const wchar_t *p) {
   return a != INVALID_FILE_ATTRIBUTES && !(a & FILE_ATTRIBUTE_DIRECTORY);
 }
 
-// ——— talking to the station: HTTP/1.0 on 127.0.0.1, with a body of `type` if there is one, the
+// ——— talking to daumhost: HTTP/1.0 on 127.0.0.1, with a body of `type` if there is one, the
 // reply's body in buf ———
 static int sendAll(SOCKET s, const char *data, int len) {
   for (int r; len > 0; data += r, len -= r)
@@ -177,7 +175,7 @@ static int request(const char *method, const char *path, const char *type, const
   DWORD ms = 3000;
   setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char *)&ms, sizeof ms);
   char req[384];
-  int n = snprintf(req, sizeof req, "%s %s HTTP/1.0\r\nHost: 127.0.0.1:%d\r\nx-station: 1\r\n%s%s%sContent-Length: %d\r\n\r\n", method, path, UI_PORT, type ? "Content-Type: " : "", type ? type : "", type ? "\r\n" : "", len);
+  int n = snprintf(req, sizeof req, "%s %s HTTP/1.0\r\nHost: 127.0.0.1:%d\r\nx-daumhost: 1\r\n%s%s%sContent-Length: %d\r\n\r\n", method, path, UI_PORT, type ? "Content-Type: " : "", type ? type : "", type ? "\r\n" : "", len);
   if (sendAll(s, req, n) || (len && sendAll(s, data, len))) {
     closesocket(s);
     return -1;
@@ -202,11 +200,11 @@ static void post(const char *path) {
 }
 
 // ——— the clipboard, in step with the server's while the settings say so (/tray): what is copied here
-// goes to the station (/clip: text, or a picture as PNG), which sends it on to the server; what the
-// server sends, the station puts on it with this program (--clip-set), marked so it does not go back.
+// goes to daumhost (/clip: text, or a picture as PNG), which sends it on to the server; what the
+// server sends, daumhost puts on it with this program (--clip-set), marked so it does not go back.
 // What a password manager marks as not to be kept or shared is passed by ———
 #define CLIP_MAX (20 * 1024 * 1024)
-#define CLIP_MARK L"RenderStation.Clip"
+#define CLIP_MARK L"DaumHost.Clip"
 static int clipOn;
 static int clipHas(const wchar_t *name) {
   return IsClipboardFormatAvailable(RegisterClipboardFormatW(name));
@@ -314,7 +312,7 @@ static HGLOBAL toDib(const char *bytes, DWORD len) {
   return out;
 }
 /** copied here: the text (UTF-8), else the picture (PNG: as it is if the copier gave one, else
- *  made from the bitmap), to the station; what the server wrote, or what is not to be kept, not */
+ *  made from the bitmap), to daumhost; what the server wrote, or what is not to be kept, not */
 static void clipChanged(void) {
   if (!clipOn || trying || quitting || !clipOpen(hwnd)) return;
   if (clipHas(CLIP_MARK) || clipHas(L"ExcludeClipboardContentFromMonitorProcessing") || clipHas(L"Clipboard Viewer Ignore") || clipSaysNo(L"CanIncludeInClipboardHistory") ||
@@ -434,7 +432,7 @@ static void show(int icon, const wchar_t *tip) {
   Shell_NotifyIconW(NIM_MODIFY, &nid);
   windowIcon();
 }
-// a dot in a colour with the play mark in white, as exe/build.mjs draws station.rc's: on a 32-unit
+// a dot in a colour with the play mark in white, as exe/build.mjs draws daumhost.rc's: on a 32-unit
 // square, the circle (16, 16, r 15) and the mark, 8×8 samples a pixel
 static int inMark(double x, double y) {
   static const double m[3][2] = { { 12.5, 9 }, { 23.5, 16 }, { 12.5, 23 } };
@@ -731,7 +729,7 @@ static HRESULT STDMETHODCALLTYPE onMessage(ICoreWebView2WebMessageReceivedEventH
 static ICoreWebView2WebMessageReceivedEventHandlerVtbl messageTable = { (void *)anyQI, (void *)oneRef, (void *)oneRef, onMessage };
 static ICoreWebView2WebMessageReceivedEventHandler messageHandler = { &messageTable };
 
-// the page loaded, or not (the station starting still): again a second later, six times
+// the page loaded, or not (daumhost starting still): again a second later, six times
 static HRESULT STDMETHODCALLTYPE onNavigated(ICoreWebView2NavigationCompletedEventHandler *self, ICoreWebView2 *sender, ICoreWebView2NavigationCompletedEventArgs *args) {
   (void)self;
   (void)sender;
@@ -905,7 +903,7 @@ static int makeFrame(void) {
   SystemParametersInfoW(SPI_GETWORKAREA, 0, &work, 0);
   int w = DIP(840), h = DIP(940);
   if (h > work.bottom - work.top - DIP(32)) h = work.bottom - work.top - DIP(32);
-  frame = CreateWindowExW(0, L"RenderStationWindow", trying ? L"daumhost（试运行）" : TITLE, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CLIPCHILDREN,
+  frame = CreateWindowExW(0, L"DaumHostWindow", trying ? L"daumhost（试运行）" : TITLE, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CLIPCHILDREN,
                           work.left + (work.right - work.left - w) / 2, work.top + (work.bottom - work.top - h) / 2, w, h, NULL, NULL, inst, NULL);
   if (!frame) return 0;
   restorePlace();
@@ -984,7 +982,7 @@ static void link(int folder, int on) {
   }
   IShellLinkW_Release(sl);
 }
-// on the first word from the station, then whenever the setting changes
+// on the first word from daumhost, then whenever the setting changes
 static void keep(int autostart, int shortcut) {
   if (autostart != lastAuto) runKey(lastAuto = autostart);
   if (shortcut != lastLink) {
@@ -1004,59 +1002,11 @@ static int elevated(void) {
   CloseHandle(t);
   return e.TokenIsElevated != 0;
 }
-static int elevateMarked(const wchar_t *dir) {
-  wchar_t mark[MAX_PATH + 48];
-  FMT(mark, L"%ls\\.tools\\remote\\elevate", dir);
-  return isFile(mark);
-}
 /** whether the overview page's switch said not to ask for administrator rights at each start */
 static int noElevate(const wchar_t *dir) {
   wchar_t mark[MAX_PATH + 48];
   FMT(mark, L"%ls\\.tools\\remote\\no-elevate", dir);
   return isFile(mark);
-}
-static void schtasksPath(wchar_t *file) {
-  wchar_t sys[MAX_PATH];
-  GetSystemDirectoryW(sys, MAX_PATH);
-  _snwprintf(file, MAX_PATH + 31, L"%ls\\schtasks.exe", sys);
-  file[MAX_PATH + 31] = 0;
-}
-/** schtasks with these arguments, with no window: its exit code, or -1 */
-static int schtasks(const wchar_t *args) {
-  wchar_t file[MAX_PATH + 32], cmd[MAX_PATH * 3];
-  schtasksPath(file);
-  FMT(cmd, L"\"%ls\" %ls", file, args);
-  STARTUPINFOW si = { sizeof si };
-  PROCESS_INFORMATION pi;
-  if (!CreateProcessW(file, cmd, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi)) return -1;
-  CloseHandle(pi.hThread);
-  WaitForSingleObject(pi.hProcess, 15000);
-  DWORD code = (DWORD)-1;
-  GetExitCodeProcess(pi.hProcess, &code);
-  CloseHandle(pi.hProcess);
-  return (int)code;
-}
-/** the same as administrator: at once if this is one, else once User Account Control has asked
- *  (over the window); 1223 if the owner said no */
-static int schtasksAdmin(const wchar_t *args) {
-  if (elevated()) return schtasks(args);
-  wchar_t file[MAX_PATH + 32];
-  schtasksPath(file);
-  SHELLEXECUTEINFOW se = { sizeof se };
-  se.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC;
-  se.hwnd = frame ? frame : hwnd;
-  se.lpVerb = L"runas";
-  se.lpFile = file;
-  se.lpParameters = args;
-  se.nShow = SW_HIDE;
-  if (!ShellExecuteExW(&se)) return GetLastError() == ERROR_CANCELLED ? 1223 : -1;
-  DWORD code = (DWORD)-1;
-  if (se.hProcess) {
-    WaitForSingleObject(se.hProcess, 15000);
-    GetExitCodeProcess(se.hProcess, &code);
-    CloseHandle(se.hProcess);
-  }
-  return (int)code;
 }
 static void toPage(const wchar_t *text) {
   if (wv) ICoreWebView2_PostWebMessageAsString(wv, text);
@@ -1074,7 +1024,7 @@ static int askAdmin(const wchar_t *file, const wchar_t *params, HWND parent) {
   return ShellExecuteExW(&se) ? 0 : (int)GetLastError();
 }
 static void leave(void);
-/** the page's 以管理员身份重新启动: this station started again as administrator, once User Account
+/** the page's 以管理员身份重新启动: this daumhost started again as administrator, once User Account
  *  Control has asked over the window (the new one waits for this to go); the page told if not
  *  (elevate busy, cancelled, error <code>) */
 static void restartAsAdmin(void) {
@@ -1089,8 +1039,8 @@ static void restartAsAdmin(void) {
   toPage(reply);
 }
 
-// ——— station.mjs, kept running ———
-static void startStation(void) {
+// ——— daumhost.mjs, kept running ———
+static void startDaumhost(void) {
   // what the last one left behind (its ssh, a render) goes with it
   if (job) {
     TerminateJobObject(job, 1);
@@ -1101,7 +1051,7 @@ static void startStation(void) {
   lim.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
   SetInformationJobObject(job, JobObjectExtendedLimitInformation, &lim, sizeof lim);
   wchar_t cmd[MAX_PATH * 3];
-  FMT(cmd, L"\"%ls\" \"%ls\\station.mjs\"", nodePath, repo);
+  FMT(cmd, L"\"%ls\" \"%ls\\daumhost.mjs\"", nodePath, repo);
   STARTUPINFOW si = { sizeof si };
   PROCESS_INFORMATION pi;
   startedAt = GetTickCount64();
@@ -1114,7 +1064,7 @@ static void startStation(void) {
   CloseHandle(pi.hThread);
   node = pi.hProcess;
 }
-// the station is not answering
+// daumhost is not answering
 static void down(void) {
   up = 0;
   // starting still
@@ -1137,10 +1087,10 @@ static void down(void) {
     }
     return show(ICON_BAD, L"daumhost · 无法启动，请右键查看日志");
   }
-  startStation();
+  startDaumhost();
   show(ICON_OFF, L"daumhost · 正在启动");
 }
-// every two seconds: how the station is (/tray: mode, tip, the pause item, the newest job and
+// every two seconds: how daumhost is (/tray: mode, tip, the pause item, the newest job and
 // what to say of it, the two settings, whether it was updated, whether the clipboard goes to the
 // server, a line each)
 static void tick(void) {
@@ -1184,7 +1134,7 @@ static void tick(void) {
   }
 }
 
-/** this gone, and the station with all it started (a trial: it alone, the station not its own) */
+/** this gone, and daumhost with all it started (a trial: it alone, daumhost not its own) */
 static void leave(void) {
   quitting = 1;
   KillTimer(hwnd, 1);
@@ -1197,7 +1147,7 @@ static void leave(void) {
   Shell_NotifyIconW(NIM_DELETE, &nid);
   DestroyWindow(hwnd);
 }
-// updated: the checkout's 渲染站.exe, the new one, starts once this has gone, and the station with it
+// updated: the checkout's daumhost.exe, the new one, starts once this has gone, and daumhost with it
 // (with the rights this has: User Account Control is not asked again)
 static void again(void) {
   quitting = 1;
@@ -1323,7 +1273,7 @@ static int findNode(void) {
   return 0;
 }
 
-// ——— uninstalling a copy the installer put in place: what the station told Windows (starting with
+// ——— uninstalling a copy the installer put in place: what daumhost told Windows (starting with
 // it, the shortcuts, the installed apps' entry), the copy it ran from, and then, from a copy of this
 // in the temporary folder once this has gone, the installed folder: all of it, or all but the
 // settings and what the jobs made (.tools) ———
@@ -1348,7 +1298,7 @@ static int uninstall(void) {
   tc.cButtons = 2;
   int pressed = 0;
   if (FAILED(TaskDialogIndirect(&tc, &pressed, NULL, NULL)) || (pressed != 100 && pressed != 101)) return 0;
-  while (stationRunning() && !stopStation())
+  while (daumhostRunning() && !stopDaumhost())
     if (MessageBoxW(NULL, L"无法关闭正在运行的 daumhost。请从托盘菜单退出 daumhost，然后单击「重试」。", L"卸载 daumhost", MB_RETRYCANCEL | MB_ICONWARNING) != IDRETRY) return 1;
   HKEY k;
   if (RegOpenKeyExW(HKEY_CURRENT_USER, RUN_KEY, 0, KEY_SET_VALUE, &k) == ERROR_SUCCESS) {
@@ -1359,20 +1309,14 @@ static int uninstall(void) {
   link(CSIDL_PROGRAMS, 0);
   RegDeleteTreeW(HKEY_CURRENT_USER, UNINSTALL_KEY);
   RegDeleteTreeW(HKEY_CURRENT_USER, PLACE_KEY);
-  // the task that started it as administrator (removing it may need User Account Control too)
-  if (elevateMarked(exeDir)) {
-    wchar_t args[64];
-    FMT(args, L"/delete /tn %ls /f", ELEVATE_TASK);
-    if (schtasks(args)) schtasksAdmin(args);
-  }
   wchar_t home[MAX_PATH + 32];
   if (GetEnvironmentVariableW(L"LOCALAPPDATA", home, MAX_PATH)) {
-    wcsncat(home, L"\\render-station", MAX_PATH - wcslen(home) - 1);
+    wcsncat(home, L"\\daumhost", MAX_PATH - wcslen(home) - 1);
     removeTree(home);
   }
   wchar_t temp[MAX_PATH], copy[MAX_PATH + 64], cmd[MAX_PATH * 3];
   GetTempPathW(MAX_PATH, temp);
-  FMT(copy, L"%lsrender-station-uninstall-%lu.exe", temp, GetCurrentProcessId());
+  FMT(copy, L"%lsdaumhost-uninstall-%lu.exe", temp, GetCurrentProcessId());
   FMT(cmd, L"\"%ls\" --uninstall-finish \"%ls\" %d %lu", copy, exeDir, pressed == 101, GetCurrentProcessId());
   STARTUPINFOW si = { sizeof si };
   PROCESS_INFORMATION pi;
@@ -1426,7 +1370,7 @@ static int uninstallFinish(const wchar_t *dir, int keepData, DWORD after) {
   return ok ? 0 : 1;
 }
 
-/** before the station starts here: the one before gone (an update's), the rights asked for, the run
+/** before daumhost starts here: the one before gone (an update's), the rights asked for, the run
  *  moved to the copy, this alone, the checkout and node found; -1 to go on, else the exit code */
 static int startHere(int quiet, int asked, DWORD after, const wchar_t *from) {
   // the last one, going after an update: once it has
@@ -1441,7 +1385,7 @@ static int startHere(int quiet, int asked, DWORD after, const wchar_t *from) {
   wchar_t home[MAX_PATH], copy[MAX_PATH + 32];
   home[0] = 0;
   if (GetEnvironmentVariableW(L"LOCALAPPDATA", home, MAX_PATH)) {
-    wcsncat(home, L"\\render-station", MAX_PATH - wcslen(home) - 1);
+    wcsncat(home, L"\\daumhost", MAX_PATH - wcslen(home) - 1);
   }
   int isCopy = home[0] && !_wcsicmp(exeDir, home);
   lstrcpynW(launcher, isCopy && from ? from : exePath, MAX_PATH);
@@ -1458,7 +1402,7 @@ static int startHere(int quiet, int asked, DWORD after, const wchar_t *from) {
   if (!isCopy && home[0] && !there) {
     wchar_t dll[MAX_PATH + 32], dllCopy[MAX_PATH + 32];
     CreateDirectoryW(home, NULL);
-    FMT(copy, L"%ls\\渲染站.exe", home);
+    FMT(copy, L"%ls\\daumhost.exe", home);
     FMT(dll, L"%ls\\WebView2Loader.dll", exeDir);
     FMT(dllCopy, L"%ls\\WebView2Loader.dll", home);
     if (CopyFileW(exePath, copy, FALSE)) {
@@ -1488,26 +1432,18 @@ static int startHere(int quiet, int asked, DWORD after, const wchar_t *from) {
     return 0;
   }
 
-  // the checkout: the folder that holds 渲染站.exe
+  // the checkout: the folder that holds daumhost.exe
   wchar_t launcherDir[MAX_PATH], check[MAX_PATH + 64];
   lstrcpynW(launcherDir, launcher, MAX_PATH);
   wchar_t *slash = wcsrchr(launcherDir, L'\\');
   if (slash) *slash = 0;
   GetFullPathNameW(launcherDir, MAX_PATH, repo, NULL);
-  FMT(check, L"%ls\\station.mjs", repo);
+  FMT(check, L"%ls\\daumhost.mjs", repo);
   if (!isFile(check)) {
-    MessageBoxW(NULL, L"渲染站.exe 必须与 station.mjs 位于同一文件夹（daumhost 仓库的根目录）。\n\n桌面上的「daumhost」是它的快捷方式，以后可从快捷方式启动。", TITLE, MB_ICONERROR);
+    MessageBoxW(NULL, L"daumhost.exe 必须与 daumhost.mjs 位于同一文件夹（daumhost 仓库的根目录）。\n\n桌面上的「daumhost」是它的快捷方式，以后可从快捷方式启动。", TITLE, MB_ICONERROR);
     return 1;
   }
-  FMT(logPath, L"%ls\\.tools\\remote\\station.log", repo);
-  // the task 0.5.0 made to start it as administrator, and its mark: asked at each start instead now
-  if (elevateMarked(repo) && elevated()) {
-    wchar_t args[64], mark[MAX_PATH + 48];
-    FMT(args, L"/delete /tn %ls /f", ELEVATE_TASK);
-    schtasks(args);
-    FMT(mark, L"%ls\\.tools\\remote\\elevate", repo);
-    DeleteFileW(mark);
-  }
+  FMT(logPath, L"%ls\\.tools\\remote\\daumhost.log", repo);
   if (!findNode()) {
     MessageBoxW(NULL, L"未找到 Node.js。请先安装 Node.js（nodejs.org，LTS 版本），再启动 daumhost。", TITLE, MB_ICONERROR);
     return 1;
@@ -1529,7 +1465,7 @@ static int startTrial(void) {
   }
   if (!CreateMutexW(NULL, TRUE, TRY_MUTEX) || GetLastError() == ERROR_ALREADY_EXISTS) return 0;
   if (!GetEnvironmentVariableW(L"LOCALAPPDATA", tryDir, MAX_PATH)) return 0;
-  wcsncat(tryDir, L"\\render-station", MAX_PATH - wcslen(tryDir) - 1);
+  wcsncat(tryDir, L"\\daumhost", MAX_PATH - wcslen(tryDir) - 1);
   CreateDirectoryW(tryDir, NULL);
   wcsncat(tryDir, L"\\try", MAX_PATH - wcslen(tryDir) - 1);
   CreateDirectoryW(tryDir, NULL);
@@ -1553,7 +1489,7 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE prev, PWSTR args, int how) {
     else if (!wcscmp(argv[i], L"--from") && i + 1 < argc) from = argv[++i];
     else if (!wcscmp(argv[i], L"--uninstall")) removing = 1;
     else if (!wcscmp(argv[i], L"--try")) trying = 1;
-    // the station's: what the server sent, onto the clipboard
+    // daumhost's: what the server sent, onto the clipboard
     else if (!wcscmp(argv[i], L"--clip-set") && i + 2 < argc) {
       clipFile = argv[++i];
       clipImage = !wcscmp(argv[++i], L"image");
@@ -1604,7 +1540,7 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE prev, PWSTR args, int how) {
     look.ground = dark ? RGB(0x17, 0x12, 0x16) : RGB(0xf9, 0xf6, 0xf3);
     look.dark = dark;
   }
-  // the icons in its colours, from the first: station.rc's are 梅紫's
+  // the icons in its colours, from the first: daumhost.rc's are 梅紫's
   paintIcons();
   // WebView2's loader, beside this
   wchar_t loader[MAX_PATH + 32];
@@ -1619,7 +1555,7 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE prev, PWSTR args, int how) {
   fc.hbrBackground = NULL;
   fc.hIcon = (HICON)LoadImageW(inst, MAKEINTRESOURCEW(1), IMAGE_ICON, GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), 0);
   fc.hIconSm = icons[ICON_BUSY];
-  fc.lpszClassName = L"RenderStationWindow";
+  fc.lpszClassName = L"DaumHostWindow";
   RegisterClassExW(&fc);
 
   WNDCLASSW wc = { 0 };
@@ -1636,7 +1572,7 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE prev, PWSTR args, int how) {
   ChangeWindowMessageFilterEx(hwnd, taskbarCreated, MSGFLT_ALLOW, NULL);
   ChangeWindowMessageFilterEx(hwnd, WM_CLIPBOARDUPDATE, MSGFLT_ALLOW, NULL);
   if (trying) {
-    // its window at once, on the station running here; an icon to open it again, and to end it
+    // its window at once, on daumhost running here; an icon to open it again, and to end it
     iconNow = ICON_BUSY;
     nid.hIcon = icons[ICON_BUSY];
     lstrcpynW(nid.szTip, L"daumhost · 试运行", 128);

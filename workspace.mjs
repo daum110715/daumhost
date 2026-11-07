@@ -1,6 +1,6 @@
-// Workspaces: the folders on this machine that jobs may work in, each registered in the station's
+// Workspaces: the folders on this machine that jobs may work in, each registered in daumhost's
 // settings with its path and the environment its jobs get. A workspace may carry a
-// render-station.json at its root, which says what it needs and what it offers:
+// daumhost.json at its root, which says what it needs and what it offers:
 //   env      the environment its jobs read, shown as fields in the settings
 //            ([{ key, label, required: true | '<platform>', placeholder, hint, type: 'switch', default }])
 //   presets  the jobs the server may run in it without asking each time
@@ -17,7 +17,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
-export const FILE = 'render-station.json';
+export const FILE = 'daumhost.json';
 /** what a workspace and a preset may be called */
 export const NAME = /^[\w.-]{1,64}$/;
 const KEY = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -86,14 +86,20 @@ function check(spec) {
 
 // read again only when the file changed
 const cache = new Map();
-/** a workspace's render-station.json, checked: { name, env, presets }, and `error` if it is not right */
+/** a workspace's daumhost.json, checked: { name, env, presets }, and `error` if it is not right */
 export function readSpec(path) {
-  const file = join(path, FILE);
+  // (for now: a project's own folder may still have its file under the old name)
+  let file = join(path, FILE);
   let stat;
   try {
     stat = statSync(file);
   } catch {
-    return { name: null, env: [], presets: {} };
+    try {
+      file = join(path, 'render-station.json');
+      stat = statSync(file);
+    } catch {
+      return { name: null, env: [], presets: {} };
+    }
   }
   const was = cache.get(file);
   if (was && was.mtimeMs === stat.mtimeMs && was.size === stat.size) return was.spec;
@@ -133,7 +139,7 @@ export function legacyEnv(path) {
   }
 }
 /** a workspace newly registered (a settings entry, { name, path, env }): what its file asks for and
- *  it was not given, taken from the settings of a station from before workspaces, those kept in its
+ *  it was not given, taken from the settings of a daumhost from before workspaces, those kept in its
  *  folder or else `fallback` (brought along by the installer); the keys taken */
 export function adopt(entry, fallback = {}) {
   const old = { ...fallback, ...legacyEnv(entry.path) };
@@ -177,7 +183,7 @@ function folder(path, create = false) {
 /** a change the server asks of the workspaces (cli.mjs workspace: { action: 'add' | 'set' | 'remove',
  *  name, path, create, env, unset }), made to `list`, the settings' (left as it is): the list it
  *  leaves; the lines that say what it changes, for the owner; the keys a workspace added took from a
- *  station from before workspaces (adopt, with `fallback`); the presets of the workspace's folder; and
+ *  daumhost from before workspaces (adopt, with `fallback`); the presets of the workspace's folder; and
  *  the folder to be made for it, if any (made by the caller, once the change is allowed) */
 export function changeWorkspaces(list, input, fallback = {}) {
   const { action, name } = input ?? {};

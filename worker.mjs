@@ -1,8 +1,8 @@
 // The worker: runs on this machine what the server asks of it, several jobs at once as the settings
-// allow. The server reaches it through the reverse SSH tunnel the station (station.mjs) keeps up; by
+// allow. The server reaches it through the reverse SSH tunnel daumhost (daumhost.mjs) keeps up; by
 // hand:
 //   ssh -N -R 7700:127.0.0.1:7700 -p <port> <user>@<server>
-// Two kinds of job. A preset of a registered workspace (workspace.mjs: what its render-station.json
+// Two kinds of job. A preset of a registered workspace (workspace.mjs: what its daumhost.json
 // says it runs, which files a job may bring and which go back): what the job brings is set up in a
 // folder of its own, .tools/remote/jobs/<n>/, removed once it is over, so no checkout is touched by
 // it, and what it made goes back and is kept here too. A Shell command, which runs only as the owner
@@ -35,12 +35,12 @@ export const WORKER = 7700;
 export const PORTS = Array.from({ length: 10 }, (_, i) => 7700 + i);
 /** what the worker and cli.mjs say to each other, and the header every request carries */
 export const PROTOCOL = 2;
-export const HEADER = 'x-render-station';
-/** what this worker can do beyond what protocol 2 began with, so cli.mjs can tell a station too old
+export const HEADER = 'x-daumhost';
+/** what this worker can do beyond what protocol 2 began with, so cli.mjs can tell a daumhost too old
  *  for a command from one that is not */
 export const FEATURES = ['pending', 'browse', 'create', 'clip'];
-const OFF = 'the owner does not let the server manage workspaces or look through folders: allow it in the local station settings';
-const CLIP_OFF = 'the owner has not turned on 同步剪贴板 (clipboard sync) in the local station settings';
+const OFF = 'the owner does not let the server manage workspaces or look through folders: allow it in the local daumhost settings';
+const CLIP_OFF = 'the owner has not turned on 同步剪贴板 (clipboard sync) in the local daumhost settings';
 /** what the server puts on the clipboard, a picture's bytes as base64 */
 const CLIP_SENT = 32 * 1024 * 1024;
 // a job's request, compressed and not
@@ -66,22 +66,22 @@ const offer = (list) =>
 
 /** the worker on `port`; `workspaces()`: the registered ones, resolved (workspace.mjs); `limit()`:
  *  how many jobs may run at once; `shell`: the gate for Shell jobs, if they are taken; `manage`: the
- *  station's handling of the server's changes to the workspaces and looks into folders ({ mode(),
+ *  daumhost's handling of the server's changes to the workspaces and looks into folders ({ mode(),
  *  change(request, signal, waiting), browse(request, signal, waiting) }, `waiting()` once one waits
- *  for the owner's approval), if it takes them; `clip`: the station's clipboard ({ on(), set(input) }:
+ *  for the owner's approval), if it takes them; `clip`: daumhost's clipboard ({ on(), set(input) }:
  *  input { type: 'text', text } or { type: 'image', data }), if it takes what the server puts on it;
  *  `keep`: a folder to keep here what each job made, the latest 30 jobs' worth;
  *  `jobs`: where each job's folder is made; `on(event)`: {type: 'queued', id, kind, …},
  *  {type: 'start', id, kind, …}, {type: 'log', id, text}, {type: 'end', id, kind, ok, code, ms,
  *  files, tail, paths}. The server it returns schedules again with `schedule()` (the limit changed,
- *  or the station paused) */
+ *  or daumhost paused) */
 export function serve({ port = WORKER, workspaces = () => [], on = () => {}, keep = null, shell = null, manage = null, clip = null, accepting = () => true, limit = () => 2, jobs = JOBS } = {}) {
   let next = 1;
   /** the jobs running, by id: their workspace's lane (null for a Shell command) and what they are */
   const running = new Map();
   /** the jobs waiting their turn, in the order they came */
   const queue = [];
-  // left by a station that stopped in the middle of a job
+  // left by a daumhost that stopped in the middle of a job
   rmSync(jobs, { recursive: true, force: true });
 
   const inLane = (lane) => [...running.values()].filter((r) => r.lane === lane).length;
@@ -90,7 +90,7 @@ export function serve({ port = WORKER, workspaces = () => [], on = () => {}, kee
     for (const entry of [...queue]) {
       if (!accepting()) {
         queue.splice(queue.indexOf(entry), 1);
-        entry.fail(new Error('station paused'));
+        entry.fail(new Error('daumhost paused'));
       } else if (running.size < limit() && (entry.lane == null || inLane(entry.lane) < entry.room)) {
         queue.splice(queue.indexOf(entry), 1);
         running.set(entry.id, { lane: entry.lane, ...entry.info });
@@ -133,7 +133,7 @@ export function serve({ port = WORKER, workspaces = () => [], on = () => {}, kee
     const preset = Object.hasOwn(w.spec.presets, payload.preset ?? '') ? w.spec.presets[payload.preset] : null;
     if (!preset) throw new Error(`workspace ${w.name} has no preset "${payload.preset}"`);
     const lack = missingEnv(w);
-    if (lack.length) throw new Error(`workspace ${w.name} is not set up here yet: ${lack.join(', ')} (in the local station settings)`);
+    if (lack.length) throw new Error(`workspace ${w.name} is not set up here yet: ${lack.join(', ')} (in the local daumhost settings)`);
     const vars = { job: dir, workspace: w.path };
     const argv = commandOf(preset, payload.args ?? [], vars);
     for (const path of Object.keys(payload.files ?? {})) if (!uploadable(preset, path)) throw new Error(`not taken by the preset: ${path}`);
@@ -153,10 +153,10 @@ export function serve({ port = WORKER, workspaces = () => [], on = () => {}, kee
       const payload = JSON.parse(gunzipSync(body, { maxOutputLength: OPENED }));
       kind = payload.type;
       if (kind === 'shell') {
-        if (!shell) throw new Error('Shell requires the local station approval service');
+        if (!shell) throw new Error('Shell requires the local daumhost approval service');
         const request = await shell.authorize(payload, signal, () => tell({ event: 'pending' }));
         await turn(id, null, 0, { kind, workspace: request.workspace, command: request.command }, signal, tell);
-        if (!accepting()) throw new Error('station paused');
+        if (!accepting()) throw new Error('daumhost paused');
         on({ type: 'start', id, kind, workspace: request.workspace, command: request.command, cwd: request.cwd, approval: request.approval });
         tell({ event: 'started' });
         const reply = await executeShell(request, { env: workspaces().find((w) => w.name === request.workspace)?.env ?? {}, signal, output: (text) => on({ type: 'log', id, text }) });
@@ -242,7 +242,7 @@ export function serve({ port = WORKER, workspaces = () => [], on = () => {}, kee
     if (req.method === 'GET' && req.url === '/hello')
       return res.writeHead(200, { 'content-type': 'application/json' }).end(
         JSON.stringify({
-          service: 'render-station',
+          service: 'daumhost',
           protocol: PROTOCOL,
           features: FEATURES,
           platform: process.platform,
@@ -257,7 +257,7 @@ export function serve({ port = WORKER, workspaces = () => [], on = () => {}, kee
         }),
       );
     if (req.method !== 'POST' || !['/job', '/workspace', '/browse', '/clip'].includes(req.url)) return res.writeHead(404).end();
-    if (!accepting()) return res.writeHead(503).end('station paused');
+    if (!accepting()) return res.writeHead(503).end('daumhost paused');
     const controller = new AbortController();
     res.on('close', () => { if (!res.writableEnded) controller.abort(); });
 
@@ -320,7 +320,7 @@ export function serve({ port = WORKER, workspaces = () => [], on = () => {}, kee
   return server;
 }
 
-// run by hand: with the workspaces the station's settings register
+// run by hand: with the workspaces daumhost's settings register
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args = process.argv.slice(2);
   const port = Number(args.includes('--port') ? args[args.indexOf('--port') + 1] : WORKER);
