@@ -88,18 +88,12 @@ function check(spec) {
 const cache = new Map();
 /** a workspace's daumhost.json, checked: { name, env, presets }, and `error` if it is not right */
 export function readSpec(path) {
-  // (for now: a project's own folder may still have its file under the old name)
-  let file = join(path, FILE);
+  const file = join(path, FILE);
   let stat;
   try {
     stat = statSync(file);
   } catch {
-    try {
-      file = join(path, 'render-station.json');
-      stat = statSync(file);
-    } catch {
-      return { name: null, env: [], presets: {} };
-    }
+    return { name: null, env: [], presets: {} };
   }
   const was = cache.get(file);
   if (was && was.mtimeMs === stat.mtimeMs && was.size === stat.size) return was.spec;
