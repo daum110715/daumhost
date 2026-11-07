@@ -12,26 +12,18 @@
 /** whether a daumhost runs (one running as administrator lets this see it is
  *  there, but no more) */
 static inline int daumhostRunning(void) {
-  // (for 0.8.0 only, which replaces the install under the old name: that one's too)
-  const wchar_t *names[] = { TRAY_MUTEX, L"Local\\render-station-tray" };
-  for (int i = 0; i < 2; i++) {
-    HANDLE m = OpenMutexW(SYNCHRONIZE, FALSE, names[i]);
-    if (m) {
-      CloseHandle(m);
-      return 1;
-    }
-    if (GetLastError() == ERROR_ACCESS_DENIED) return 1;
+  HANDLE m = OpenMutexW(SYNCHRONIZE, FALSE, TRAY_MUTEX);
+  if (m) {
+    CloseHandle(m);
+    return 1;
   }
-  return 0;
+  return GetLastError() == ERROR_ACCESS_DENIED;
 }
 /** the running daumhost asked to quit, as its tray menu would (it asks first if a job is running):
  *  1 once none runs, within 20 s */
 static inline int stopDaumhost(void) {
-  const wchar_t *classes[] = { TRAY_CLASS, L"RenderStation" };
-  for (int i = 0; i < 2; i++) {
-    HWND w = FindWindowW(classes[i], NULL);
-    if (w) PostMessageW(w, WM_COMMAND, TRAY_QUIT, 0);
-  }
+  HWND w = FindWindowW(TRAY_CLASS, NULL);
+  if (w) PostMessageW(w, WM_COMMAND, TRAY_QUIT, 0);
   for (int t = 0; t < 200; t++) {
     if (!daumhostRunning()) {
       // what it ran, node and ssh, ends with it a moment later

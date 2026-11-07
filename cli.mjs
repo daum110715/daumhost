@@ -263,8 +263,7 @@ if (opts.help || what === 'help') {
 const tell = (text) => opts.json || console.error(text);
 
 // ——— the worker ———
-// (the second for a device still on a release under the old name, until 0.8.0 is in)
-const headers = { [HEADER]: String(PROTOCOL), 'x-render-station': String(PROTOCOL) };
+const headers = { [HEADER]: String(PROTOCOL) };
 /** a request to the worker on `port`: the reply's status and body */
 const call = (port, method, path, body, timeout = 0) =>
   new Promise((done, fail) => {
@@ -369,7 +368,7 @@ for (const p of process.env.DAUMHOST_PORT ? [Number(process.env.DAUMHOST_PORT)] 
   try {
     said = res?.status === 200 ? JSON.parse(res.body) : null;
   } catch {}
-  if (said?.service === 'daumhost' || said?.service === 'render-station') {
+  if (said?.service === 'daumhost') {
     port = p;
     hello = said;
     break;

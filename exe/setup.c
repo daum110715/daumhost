@@ -2,8 +2,7 @@
 // tar of all an installed copy holds: daumhost, its window's fonts, Node.js, the signed
 // release.json), then the version, the tar's size and a mark. Once the owner agrees, it has a running
 // daumhost quit, unpacks the tar into
-// %LOCALAPPDATA%\Programs\daumhost\ with Windows' own tar.exe, takes over from the install under
-// the old name (0.8.0 only), adds daumhost to Windows' installed apps (daumhost.exe --uninstall removes
+// %LOCALAPPDATA%\Programs\daumhost\ with Windows' own tar.exe, adds daumhost to Windows' installed apps (daumhost.exe --uninstall removes
 // it) and starts it. Per user: no administrator is needed, and daumhost updates itself there.
 // Built by exe/build.mjs; release/build.mjs appends the release.
 #ifndef UNICODE
@@ -122,48 +121,6 @@ static int unpack(void) {
 }
 
 
-/** for 0.8.0 only: what the install under the old name left, gone, its .tools (the settings, the
- *  history) moved here first; left alone if they could not be */
-static void leaveOldName(void) {
-  wchar_t base[MAX_PATH], old[MAX_PATH + 64], from[MAX_PATH + 72], to[MAX_PATH + 32], conf[MAX_PATH + 96], mine[MAX_PATH + 64], lnk[MAX_PATH + 32], folder[MAX_PATH];
-  if (!GetEnvironmentVariableW(L"LOCALAPPDATA", base, MAX_PATH)) return;
-  FMT(old, L"%ls\\Programs\\render-station", base);
-  FMT(from, L"%ls\\.tools", old);
-  FMT(to, L"%ls\\.tools", dir);
-  FMT(mine, L"%ls\\.tools\\remote\\config.json", dir);
-  if (GetFileAttributesW(from) != INVALID_FILE_ATTRIBUTES) {
-    int moved = 0;
-    for (int i = 0; i < 10 && !moved; i++) {
-      moved = GetFileAttributesW(to) == INVALID_FILE_ATTRIBUTES && MoveFileW(from, to);
-      if (!moved) Sleep(1000);
-    }
-    if (!moved && !isFile(mine)) {
-      FMT(conf, L"%ls\\remote\\config.json", from);
-      FMT(to, L"%ls\\.tools\\remote", dir);
-      SHCreateDirectoryExW(NULL, to, NULL);
-      if (!CopyFileW(conf, mine, TRUE)) return;
-    }
-  }
-  for (int i = 0; i < 5 && GetFileAttributesW(old) != INVALID_FILE_ATTRIBUTES; i++) {
-    removeTree(old);
-    Sleep(1000);
-  }
-  FMT(old, L"%ls\\render-station", base);
-  for (int i = 0; i < 5 && GetFileAttributesW(old) != INVALID_FILE_ATTRIBUTES; i++) {
-    removeTree(old);
-    Sleep(1000);
-  }
-  RegDeleteKeyValueW(HKEY_CURRENT_USER, RUN_KEY, L"渲染站");
-  RegDeleteTreeW(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\render-station");
-  RegDeleteTreeW(HKEY_CURRENT_USER, L"Software\\render-station");
-  const int where[] = { CSIDL_DESKTOPDIRECTORY, CSIDL_PROGRAMS };
-  for (int i = 0; i < 2; i++) {
-    if (SHGetFolderPathW(NULL, where[i], NULL, 0, folder) != S_OK) continue;
-    FMT(lnk, L"%ls\\渲染站.lnk", folder);
-    DeleteFileW(lnk);
-  }
-}
-
 static void setString(HKEY k, const wchar_t *name, const wchar_t *value) {
   RegSetValueExW(k, name, 0, REG_SZ, (const BYTE *)value, (DWORD)((wcslen(value) + 1) * sizeof(wchar_t)));
 }
@@ -202,10 +159,7 @@ static DWORD WINAPI work(LPVOID unused) {
   FMT(archive, L"%ls\\.setup.tar.gz", dir);
   if (made != ERROR_SUCCESS && made != ERROR_ALREADY_EXISTS) fail(L"无法创建安装目录（错误代码 %d）：\n%ls", made, dir);
   else if (!writePayload(archive)) fail(L"无法写入安装数据（错误代码 %lu）。", GetLastError());
-  else if (unpack()) {
-    leaveOldName();
-    registerApp();
-  }
+  else if (unpack()) registerApp();
   DeleteFileW(archive);
   InterlockedExchange(&finished, 1);
   return 0;
@@ -232,35 +186,9 @@ static HRESULT CALLBACK progress(HWND h, UINT msg, WPARAM wp, LPARAM lp, LONG_PT
   return S_OK;
 }
 
-/** the same work with no one asked and nothing shown: what went wrong is left in daumhost-setup.log,
- *  and the old install is started again if it is still there */
-static int quietly(void) {
-  wchar_t base[MAX_PATH], text[MAX_PATH + 64];
-  GetEnvironmentVariableW(L"LOCALAPPDATA", base, MAX_PATH);
-  for (int i = 0; i < 3 && daumhostRunning(); i++) stopDaumhost();
-  if (daumhostRunning()) fail(L"daumhost is still running");
-  else work(NULL);
-  if (!failure[0]) {
-    FMT(text, L"%ls\\daumhost.exe", dir);
-    if ((INT_PTR)ShellExecuteW(NULL, L"open", text, L"/quiet", dir, SW_SHOWNORMAL) <= 32) fail(L"could not start %ls", text);
-  }
-  if (failure[0]) {
-    FMT(text, L"%ls\\daumhost-setup.log", base);
-    HANDLE f = CreateFileW(text, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL);
-    if (f != INVALID_HANDLE_VALUE) {
-      DWORD wrote;
-      WriteFile(f, failure, (DWORD)(wcslen(failure) * sizeof(wchar_t)), &wrote, NULL);
-      CloseHandle(f);
-    }
-    FMT(text, L"%ls\\Programs\\render-station\\渲染站.exe", base);
-    if (isFile(text)) ShellExecuteW(NULL, L"open", text, L"/quiet", NULL, SW_SHOWNORMAL);
-    return 1;
-  }
-  return 0;
-}
-
 int WINAPI wWinMain(HINSTANCE hi, HINSTANCE prev, PWSTR args, int how) {
   (void)prev;
+  (void)args;
   (void)how;
   inst = hi;
   GetModuleFileNameW(NULL, exePath, MAX_PATH);
@@ -274,9 +202,6 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE prev, PWSTR args, int how) {
     MessageBoxW(NULL, L"安装程序不完整，找不到安装数据。请重新下载安装程序。", TITLE, MB_ICONERROR);
     return 1;
   }
-
-  // ——— for 0.8.x only: the old install, starting this itself to move over, wants no questions ———
-  if (args && wcsstr(args, L"--quiet")) return quietly();
 
   // ——— asked first ———
   wchar_t check[MAX_PATH + 32], heading[96], content[MAX_PATH + 256];

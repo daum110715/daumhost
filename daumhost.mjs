@@ -100,9 +100,7 @@ let config = {
   clipboard: false,
 };
 try {
-  // (for 0.8.0 only: settings moved from the install under the old name, which name its folder)
-  const saved = JSON.parse(readFileSync(CONFIG, 'utf8').replaceAll('Programs\\\\render-station', 'Programs\\\\daumhost'));
-  for (const w of saved.workspaces ?? []) if (w.name === 'render-station') w.name = 'daumhost';
+  const saved = JSON.parse(readFileSync(CONFIG, 'utf8'));
   config = { ...config, ...saved, ssh: { ...config.ssh, ...saved.ssh } };
 } catch {}
 const save = () => writeFileSync(CONFIG, JSON.stringify(config, null, 2));
