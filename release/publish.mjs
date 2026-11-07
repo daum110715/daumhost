@@ -22,7 +22,7 @@ const rsync = (args, input) => execFileSync('rsync', args, { cwd: out, input, st
 ssh(`mkdir -p ${ROOT}/files && chmod 755 apps/daumhost ${ROOT} ${ROOT}/files`);
 const blobs = [...new Set(Object.values(release.files).map((f) => `files/${f.sha256}.gz`))];
 rsync(['-a', '--ignore-existing', '--chmod=D755,F644', '--files-from=-', '.', `lu1:${ROOT}/`], blobs.join('\n'));
-rsync(['-a', '--chmod=F644', release.setup, `lu1:${ROOT}/`]);
+rsync(['-a', '--chmod=F644', release.setup, `${release.setup}.sig`, `lu1:${ROOT}/`]);
 ssh(`cd ${ROOT} && ln -sfn ${release.setup} .setup-link && mv -Tf .setup-link daumhost-setup.exe`);
 rsync(['-a', '--chmod=F644', 'latest.json', `lu1:${ROOT}/latest.json`]);
 

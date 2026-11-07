@@ -156,9 +156,11 @@ const payload = gzipSync(tar({ ...files, 'release.json': Buffer.from(text) }, Ma
 const tail = Buffer.alloc(48);
 tail.write(version, 0, 32, 'utf8');
 tail.writeBigUInt64LE(BigInt(payload.length), 32);
-tail.write('RSSETUP1', 40, 'ascii');
+tail.write('DHSETUP1', 40, 'ascii');
 const installer = Buffer.concat([readFileSync(join(repo, '.tools/exe-build/setup.exe')), payload, tail]);
 writeFileSync(join(out, setup), installer);
+// (for 0.8.x only: what the old install checks the installer by, before it runs it to move over)
+writeFileSync(join(out, `${setup}.sig`), sign(null, installer, key).toString('base64'));
 const mb = (n) => `${(n / 1024 / 1024).toFixed(1)} MB`;
 console.log(`release ${version}: ${Object.keys(files).length} files, ${mb(Object.values(files).reduce((n, d) => n + d.length, 0))}; installer ${mb(installer.length)}`);
 console.log(join(out, setup));

@@ -26,7 +26,7 @@
 #define FMT(buf, ...) (_snwprintf(buf, sizeof buf / sizeof *buf - 1, __VA_ARGS__), buf[sizeof buf / sizeof *buf - 1] = 0)
 #define TITLE L"daumhost 安装程序"
 // the end of this file: the version (32 bytes, UTF-8, NUL-padded), the tar's size (8, little-endian), the mark
-#define MARK "RSSETUP1"
+#define MARK "DHSETUP1"
 #define TAIL 48
 
 static HINSTANCE inst;
@@ -232,9 +232,35 @@ static HRESULT CALLBACK progress(HWND h, UINT msg, WPARAM wp, LPARAM lp, LONG_PT
   return S_OK;
 }
 
+/** the same work with no one asked and nothing shown: what went wrong is left in daumhost-setup.log,
+ *  and the old install is started again if it is still there */
+static int quietly(void) {
+  wchar_t base[MAX_PATH], text[MAX_PATH + 64];
+  GetEnvironmentVariableW(L"LOCALAPPDATA", base, MAX_PATH);
+  for (int i = 0; i < 3 && daumhostRunning(); i++) stopDaumhost();
+  if (daumhostRunning()) fail(L"daumhost is still running");
+  else work(NULL);
+  if (!failure[0]) {
+    FMT(text, L"%ls\\daumhost.exe", dir);
+    if ((INT_PTR)ShellExecuteW(NULL, L"open", text, L"/quiet", dir, SW_SHOWNORMAL) <= 32) fail(L"could not start %ls", text);
+  }
+  if (failure[0]) {
+    FMT(text, L"%ls\\daumhost-setup.log", base);
+    HANDLE f = CreateFileW(text, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, 0, NULL);
+    if (f != INVALID_HANDLE_VALUE) {
+      DWORD wrote;
+      WriteFile(f, failure, (DWORD)(wcslen(failure) * sizeof(wchar_t)), &wrote, NULL);
+      CloseHandle(f);
+    }
+    FMT(text, L"%ls\\Programs\\render-station\\渲染站.exe", base);
+    if (isFile(text)) ShellExecuteW(NULL, L"open", text, L"/quiet", NULL, SW_SHOWNORMAL);
+    return 1;
+  }
+  return 0;
+}
+
 int WINAPI wWinMain(HINSTANCE hi, HINSTANCE prev, PWSTR args, int how) {
   (void)prev;
-  (void)args;
   (void)how;
   inst = hi;
   GetModuleFileNameW(NULL, exePath, MAX_PATH);
@@ -248,6 +274,9 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE prev, PWSTR args, int how) {
     MessageBoxW(NULL, L"安装程序不完整，找不到安装数据。请重新下载安装程序。", TITLE, MB_ICONERROR);
     return 1;
   }
+
+  // ——— for 0.8.x only: the old install, starting this itself to move over, wants no questions ———
+  if (args && wcsstr(args, L"--quiet")) return quietly();
 
   // ——— asked first ———
   wchar_t check[MAX_PATH + 32], heading[96], content[MAX_PATH + 256];
