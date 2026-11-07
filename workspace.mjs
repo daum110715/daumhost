@@ -121,7 +121,7 @@ export function resolveWorkspaces(list) {
   });
 }
 
-/** what a render station from before workspaces, run from a checkout of the folder, kept there of
+/** what a daumhost from before workspaces, run from a checkout of the folder, kept there of
  *  its jobs' environment (its .tools/remote/config.json's env) */
 export function legacyEnv(path) {
   try {
@@ -201,7 +201,7 @@ export function changeWorkspaces(list, input, fallback = {}) {
     entry = { name, path: f.path, env: Object.fromEntries(Object.entries(env).filter(([, v]) => v.trim()).map(([k, v]) => [k, v.trim()])) };
     imported = adopt(entry, fallback);
     after.push(entry);
-    lines.push(`路径：${entry.path}${made(f)}`, ...Object.entries(entry.env).map(([k, v]) => `${k}：${v}${imported.includes(k) ? '（从旧版渲染站的设置中导入）' : ''}`));
+    lines.push(`路径：${entry.path}${made(f)}`, ...Object.entries(entry.env).map(([k, v]) => `${k}：${v}${imported.includes(k) ? '（从旧版 daumhost 的设置中导入）' : ''}`));
   } else if (at < 0) throw new Error(`no workspace "${name}" on this machine`);
   else if (action === 'remove') {
     lines.push(`路径：${after[at].path}`);

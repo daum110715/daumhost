@@ -2,7 +2,7 @@
 
 [English](cli.md) | 中文
 
-`render-station` 是服务器上的命令行工具，用于向设备提交任务和管理设备上的工作区，简称 `rs`。服务器、设备、工作区、预设任务等术语，以及设备的安装和配置，见 [README](../README.zh-CN.md)。
+`daumhost`（旧名 `daumhost`、`render-station` 仍可用）是服务器上的命令行工具，用于向设备提交任务和管理设备上的工作区，简称 `daumhost`。服务器、设备、工作区、预设任务等术语，以及设备的安装和配置，见 [README](../README.zh-CN.md)。
 
 ## 安装
 
@@ -12,7 +12,7 @@
 npm link
 ```
 
-该命令把 `render-station` 和 `rs` 两个命令安装到 npm 的全局 `bin` 目录，该目录须在 `PATH` 中。命令始终指向这份克隆，`git pull` 后命令随之更新。不执行 `npm link` 时，可改用 `node /path/to/render-station/cli.mjs`，用法相同。
+该命令把 `daumhost`、`render-station` 和 `daumhost` 两个命令安装到 npm 的全局 `bin` 目录，该目录须在 `PATH` 中。命令始终指向这份克隆，`git pull` 后命令随之更新。不执行 `npm link` 时，可改用 `node /path/to/render-station/cli.mjs`，用法相同。
 
 ## 命令一览
 
@@ -30,16 +30,16 @@ npm link
 ## 通用规则
 
 - `--json`：只在标准输出打印一个 JSON 对象，即执行结果。所有命令都支持。
-- `-h`、`--help`：显示该命令的说明，与 `rs help <命令>` 相同。
+- `-h`、`--help`：显示该命令的说明，与 `daumhost help <命令>` 相同。
 - 选项位置：`run` 和 `shell` 的选项必须写在预设任务或命令之前，因为其后的内容会作为参数或命令原样传递。其他命令的选项可以写在任意位置。`--` 表示选项到此结束。
 - 过程提示（例如任务在队列中的位置、正在等待审批）输出到标准错误；加 `--json` 时不输出。
-- 命令通过隧道连接设备，依次尝试服务器的 7700–7709 端口，使用第一个有渲染站响应的端口。设置环境变量 `RENDER_STATION_PORT` 时只使用该端口。
+- 命令通过隧道连接设备，依次尝试服务器的 7700–7709 端口，使用第一个有 daumhost 响应的端口。设置环境变量 `RENDER_STATION_PORT` 时只使用该端口。
 - 设备上的路径须写完整路径。可以用正斜杠，例如 `F:/projects/site`；使用反斜杠时须加引号，例如 `'F:\projects\site'`。
 
 ## status
 
 ```sh
-rs status [--json]
+daumhost status [--json]
 ```
 
 显示设备是否在线、正在运行和排队的任务数、同时运行的任务数上限、是否已暂停、Shell 模式、是否允许服务器管理工作区，以及各工作区的预设任务和尚未填写的设置。
@@ -50,9 +50,9 @@ rs status [--json]
 |---|---|
 | `online` | 是否连接到设备。 |
 | `port` | 使用的端口。 |
-| `protocol`、`features` | 协议版本和渲染站支持的功能（见「兼容性」）。 |
+| `protocol`、`features` | 协议版本和 daumhost 支持的功能（见「兼容性」）。 |
 | `platform` | 设备的操作系统，例如 `win32`。 |
-| `accepting` | 渲染站暂停接收任务时为 `false`。 |
+| `accepting` | daumhost 暂停接收任务时为 `false`。 |
 | `limit` | 同时运行的任务数上限。 |
 | `running` | 正在运行的任务，每项包括 `id`、`kind` 以及预设任务或命令。 |
 | `queued` | 排队的任务数。 |
@@ -63,7 +63,7 @@ rs status [--json]
 ## presets
 
 ```sh
-rs presets [<工作区>] [--json]
+daumhost presets [<工作区>] [--json]
 ```
 
 列出所有工作区或指定工作区的预设任务。每个预设任务显示说明、接受的参数（每个参数必须完整匹配所列的某个模式）、任务从服务器带上的文件，以及执行时限。
@@ -73,7 +73,7 @@ rs presets [<工作区>] [--json]
 ## run
 
 ```sh
-rs run [--src <目录>] [--out <目录>] [--json] <工作区>/<预设任务> [参数…]
+daumhost run [--src <目录>] [--out <目录>] [--json] <工作区>/<预设任务> [参数…]
 ```
 
 在设备上运行预设任务，并等待其结束。
@@ -86,7 +86,7 @@ rs run [--src <目录>] [--out <目录>] [--json] <工作区>/<预设任务> [�
 
 ```sh
 cd ~/site
-rs run site/build 1080p
+daumhost run site/build 1080p
 ```
 
 加 `--json` 时输出：
@@ -105,7 +105,7 @@ rs run site/build 1080p
 ## shell
 
 ```sh
-rs shell [--workspace <名称>] [--cwd <目录>] [--timeout <秒>] [--json] <命令…>
+daumhost shell [--workspace <名称>] [--cwd <目录>] [--timeout <秒>] [--json] <命令…>
 ```
 
 在设备上执行命令，输出命令的全部输出和退出码。设备上须已开启 Shell，见 README 的「Shell 权限」。
@@ -119,8 +119,8 @@ rs shell [--workspace <名称>] [--cwd <目录>] [--timeout <秒>] [--json] <命
 - 命令会显示在审批窗口中并写入设备的日志，因此不得在命令中包含密钥或密码。
 
 ```sh
-rs sh --workspace site git status
-rs sh --workspace site --cwd assets --timeout 60 'Get-ChildItem -Recurse | Measure-Object'
+daumhost sh --workspace site git status
+daumhost sh --workspace site --cwd assets --timeout 60 'Get-ChildItem -Recurse | Measure-Object'
 ```
 
 加 `--json` 时输出的字段与 `run` 相同，其中 `kind` 为 `"shell"`，并以 `command` 代替 `preset` 和 `args`。
@@ -128,15 +128,15 @@ rs sh --workspace site --cwd assets --timeout 60 'Get-ChildItem -Recurse | Measu
 ## workspace
 
 ```sh
-rs workspace [list] [--json]
-rs workspace add <名称> <路径> [--create] [--env 名称=值 …] [--json]
-rs workspace set <名称> [--path <路径> [--create]] [--env 名称=值 …] [--unset 名称 …] [--json]
-rs workspace remove <名称> [--json]
+daumhost workspace [list] [--json]
+daumhost workspace add <名称> <路径> [--create] [--env 名称=值 …] [--json]
+daumhost workspace set <名称> [--path <路径> [--create]] [--env 名称=值 …] [--unset 名称 …] [--json]
+daumhost workspace remove <名称> [--json]
 ```
 
 不带操作或使用 `list` 时，按 `status` 的格式列出工作区。其他操作用于变更工作区：
 
-- `add`：把文件夹登记为工作区。该文件夹中留有旧版渲染站的 `.tools/remote/config.json` 时，其中工作区文件声明的设置会自动导入。
+- `add`：把文件夹登记为工作区。该文件夹中留有旧版 daumhost 的 `.tools/remote/config.json` 时，其中工作区文件声明的设置会自动导入。
 - `set`：修改工作区的路径或设置。`--env 名称=`（值为空）与 `--unset 名称` 相同，都会清除该设置。
 - `remove`：取消登记工作区，不改动其文件夹。
 - `--create`：文件夹不存在时新建。不加此选项时，文件夹不存在会报错。
@@ -145,10 +145,10 @@ rs workspace remove <名称> [--json]
 变更是否需要审批，由设备上的「服务器管理工作区」决定，见「审批」。
 
 ```sh
-rs ws add site F:/projects/site
-rs ws add scratch F:/scratch --create
-rs ws set site --env FFMPEG=C:/ffmpeg/bin/ffmpeg.exe
-rs ws remove scratch
+daumhost ws add site F:/projects/site
+daumhost ws add scratch F:/scratch --create
+daumhost ws set site --env FFMPEG=C:/ffmpeg/bin/ffmpeg.exe
+daumhost ws remove scratch
 ```
 
 设置值会显示在审批窗口中并写入设备的日志，因此不得通过 `--env` 传递密钥或密码。
@@ -158,7 +158,7 @@ rs ws remove scratch
 ## ls
 
 ```sh
-rs ls [<路径>] [--json]
+daumhost ls [<路径>] [--json]
 ```
 
 列出设备上某个文件夹的内容，包括其中各文件和文件夹的名称、大小和修改时间，不读取文件内容。不带路径时列出设备的磁盘。
@@ -167,9 +167,9 @@ rs ls [<路径>] [--json]
 - 已登记工作区内的文件夹无需审批即可列出。其他文件夹按「服务器管理工作区」的设置处理，见「审批」。
 
 ```sh
-rs ls
-rs ls F:/
-rs ls 'F:\projects'
+daumhost ls
+daumhost ls F:/
+daumhost ls 'F:\projects'
 ```
 
 加 `--json` 时输出 `ok`、`path`（文件夹的完整路径，列出磁盘时为 `null`）、`entries`（每项包括 `name`、`type`（`"folder"` 或 `"file"`）、以字节为单位的 `size`（文件夹为 `null`）、以 1970 年起的毫秒数表示的 `modified`）和 `more`（未列出的项数）。
@@ -177,41 +177,41 @@ rs ls 'F:\projects'
 ## clip
 
 ```sh
-rs clip [--json]
-rs clip ls [--json]
-rs clip set [<文字…>] [--file <路径>] [--json]
+daumhost clip [--json]
+daumhost clip ls [--json]
+daumhost clip set [<文字…>] [--file <路径>] [--json]
 ```
 
-设备上开启「同步剪贴板」后，在设备上复制的文字和图片会自动写入服务器的 `~/.render-station/clipboard/`，见 README 的「剪贴板同步」。`rs clip` 和 `xclip` 会在该账号的主目录和（与之不同时）`$HOME` 里都找，读最后到的那一份。
+设备上开启「同步剪贴板」后，在设备上复制的文字和图片会自动写入服务器的 `~/.render-station/clipboard/`，见 README 的「剪贴板同步」。`daumhost clip` 和 `xclip` 会在该账号的主目录和（与之不同时）`$HOME` 里都找，读最后到的那一份。
 
-- `rs clip`：输出最新的一份。文字原样输出；图片输出其 PNG 文件的路径。
-- `rs clip ls`：列出最近 50 份，从新到旧，包括时间、类型、大小、路径和文字的开头。
+- `daumhost clip`：输出最新的一份。文字原样输出；图片输出其 PNG 文件的路径。
+- `daumhost clip ls`：列出最近 50 份，从新到旧，包括时间、类型、大小、路径和文字的开头。
 - 以上两个命令只读取服务器上的文件，不需要设备在线。
-- `rs clip set`：写入设备的剪贴板，内容依次取自命令后的文字、`--file` 指定的文件或标准输入。PNG、JPEG、GIF、BMP 和 TIFF 文件作为图片写入，其余内容作为 UTF-8 文字写入；上限 20 MB。以 `--` 开头的文字须放在 `--` 之后。写入的内容不会再同步回服务器。
+- `daumhost clip set`：写入设备的剪贴板，内容依次取自命令后的文字、`--file` 指定的文件或标准输入。PNG、JPEG、GIF、BMP 和 TIFF 文件作为图片写入，其余内容作为 UTF-8 文字写入；上限 20 MB。以 `--` 开头的文字须放在 `--` 之后。写入的内容不会再同步回服务器。
 
 ```sh
-rs clip
-rs clip ls
-git diff | rs clip set
-rs clip set --file shot.png
+daumhost clip
+daumhost clip ls
+git diff | daumhost clip set
+daumhost clip set --file shot.png
 ```
 
 ### 作为 xclip 使用
 
-服务器上的程序（例如 Claude Code 粘贴图片时）通过 `xclip` 读写剪贴板。把 `rs` 链接为 `xclip`，并放在 PATH 中靠前的文件夹里：
+服务器上的程序（例如 Claude Code 粘贴图片时）通过 `xclip` 读写剪贴板。把 `daumhost` 链接为 `xclip`，并放在 PATH 中靠前的文件夹里：
 
 ```sh
-ln -s "$(command -v rs)" ~/.local/bin/xclip
+ln -s "$(command -v daumhost)" ~/.local/bin/xclip
 ```
 
-此后，这些程序读到的是设备上最近复制的内容（与 `rs clip` 相同），写入的内容则通过 `rs clip set` 写入设备的剪贴板。这样，在设备上复制的图片可以直接粘贴到服务器上的 Claude Code 中。Claude Code 在 Linux 上用 Ctrl+V 粘贴图片，而 Windows 终端会把 Ctrl+V 留给自己粘贴文字；可以在服务器的 `~/.claude/keybindings.json` 中把 Alt+V 也绑定到粘贴图片：`{"bindings": [{"context": "Chat", "bindings": {"alt+v": "chat:imagePaste"}}]}`。支持 xclip 的 `-selection`、`-target`（含 `TARGETS`）、`-out`、`-in`、`-filter` 和 `-rmlastnl` 选项，以及它们的缩写。不要在有图形界面的机器上这样做，否则会盖住真正的 xclip。
+此后，这些程序读到的是设备上最近复制的内容（与 `daumhost clip` 相同），写入的内容则通过 `daumhost clip set` 写入设备的剪贴板。这样，在设备上复制的图片可以直接粘贴到服务器上的 Claude Code 中。Claude Code 在 Linux 上用 Ctrl+V 粘贴图片，而 Windows 终端会把 Ctrl+V 留给自己粘贴文字；可以在服务器的 `~/.claude/keybindings.json` 中把 Alt+V 也绑定到粘贴图片：`{"bindings": [{"context": "Chat", "bindings": {"alt+v": "chat:imagePaste"}}]}`。支持 xclip 的 `-selection`、`-target`（含 `TARGETS`）、`-out`、`-in`、`-filter` 和 `-rmlastnl` 选项，以及它们的缩写。不要在有图形界面的机器上这样做，否则会盖住真正的 xclip。
 
-加 `--json` 时，`rs clip` 输出 `ok`、`path`、`type`（`"text"` 或 `"image"`）、以字节为单位的 `size`、以 1970 年起的毫秒数表示的 `at`，文字另有 `text`；`rs clip ls` 输出 `ok` 和 `entries`，各项字段同上（不含 `text`）；`rs clip set` 输出 `ok`、`type` 和 `size`。
+加 `--json` 时，`daumhost clip` 输出 `ok`、`path`、`type`（`"text"` 或 `"image"`）、以字节为单位的 `size`、以 1970 年起的毫秒数表示的 `at`，文字另有 `text`；`daumhost clip ls` 输出 `ok` 和 `entries`，各项字段同上（不含 `text`）；`daumhost clip set` 输出 `ok`、`type` 和 `size`。
 
 ## help
 
 ```sh
-rs help [<命令>]
+daumhost help [<命令>]
 ```
 
 显示命令列表，或某个命令的用途、选项和示例。
@@ -236,36 +236,36 @@ rs help [<命令>]
 |---|---|
 | 0 | 执行成功。 |
 | 任务自身的退出码 | 任务已运行，但失败。 |
-| 1 | 请求在运行前失败：参数不被预设接受、审批被拒绝或超时、工作区变更被拒绝、文件夹无法列出，或设备上的渲染站版本过旧。 |
+| 1 | 请求在运行前失败：参数不被预设接受、审批被拒绝或超时、工作区变更被拒绝、文件夹无法列出，或设备上的 daumhost 版本过旧。 |
 | 2 | 命令的用法错误。 |
-| 3 | 无法连接设备，或渲染站已暂停、排队的任务已满。 |
+| 3 | 无法连接设备，或 daumhost 已暂停、排队的任务已满。 |
 
 任务自身的退出码可能与 1、2、3 重合；需要区分时，使用 `--json` 输出中的 `exitCode`。
 
 ## 兼容性
 
-命令与设备上的渲染站须使用相同的协议版本，否则所有命令都会报告 `protocol mismatch`。在同一协议版本内，渲染站在 `status --json` 中列出其支持的功能。命令需要的功能（例如 `ls` 或 `--create`）设备不支持时，会提示设备上的渲染站版本过旧；渲染站会自动更新，也可以在其「设置 → 更新与关于」页单击「立即检查」。
+命令与设备上的 daumhost 须使用相同的协议版本，否则所有命令都会报告 `protocol mismatch`。在同一协议版本内，daumhost 在 `status --json` 中列出其支持的功能。命令需要的功能（例如 `ls` 或 `--create`）设备不支持时，会提示设备上的 daumhost 版本过旧；daumhost 会自动更新，也可以在其「设置 → 更新与关于」页单击「立即检查」。
 
 ## 常用操作
 
 在设备上登记项目文件夹，并查看它提供的预设任务：
 
 ```sh
-rs ls                     # 列出磁盘
-rs ls F:/                 # 须批准一次；此后 10 分钟内，F:/ 下的文件夹无需再次批准
-rs ls F:/projects
-rs ws add site F:/projects/site
-rs presets site
+daumhost ls                     # 列出磁盘
+daumhost ls F:/                 # 须批准一次；此后 10 分钟内，F:/ 下的文件夹无需再次批准
+daumhost ls F:/projects
+daumhost ws add site F:/projects/site
+daumhost presets site
 ```
 
 在脚本中运行预设任务并读取结果：
 
 ```sh
-rs run --json --src ~/site site/build 1080p > result.json
+daumhost run --json --src ~/site site/build 1080p > result.json
 ```
 
 提交任务前检查设备是否就绪：
 
 ```sh
-rs status --json | jq '.online and .accepting'
+daumhost status --json | jq '.online and .accepting'
 ```

@@ -1,4 +1,4 @@
-// 渲染站, the render station, on the machine that takes the server's heavy work: keeps the worker
+// daumhost, daumhost, on the machine that takes the server's heavy work: keeps the worker
 // (worker.mjs) and the reverse SSH tunnel to the server up, through sleep, wake and lost networks,
 // and shows both in a small window (station.html, at http://127.0.0.1:7799): what it is doing, what
 // ssh and the jobs print as they print it, the jobs lately done and what they made, the settings.
@@ -52,7 +52,7 @@ const LOG = join(dir, 'station.log');
 if (existsSync(LOG) && statSync(LOG).size > 1e6) rmSync(LOG);
 const log = (line) => appendFileSync(LOG, `${new Date().toISOString()}  ${line}\n`);
 process.on('uncaughtException', (e) => {
-  log(`渲染站因错误退出：${e?.stack ?? e}`);
+  log(`daumhost 因错误退出：${e?.stack ?? e}`);
   process.exit(1);
 });
 /** the window's feed, the latest 600 lines: what the station says ('station', 'tunnel', 'job', 'shell')
@@ -324,9 +324,9 @@ let updateAfterJob = false;
 /** after an update: the tray icon starts itself again if its program changed, else the station does
  *  if what changed is of its own */
 function restartFor(changed, ours) {
-  if (changed.some((f) => /^(渲染站\.exe|WebView2Loader\.dll)$/.test(f))) trayAgain = true;
+  if (changed.some((f) => /^(daumhost\.exe|WebView2Loader\.dll)$/.test(f))) trayAgain = true;
   else if (changed.some(ours)) {
-    note('station', '渲染站的代码已更新，即将重新启动');
+    note('station', 'daumhost 的代码已更新，即将重新启动');
     setTimeout(() => {
       stop();
       process.exit(75);
@@ -509,7 +509,7 @@ function askChanged() {
   if (!p) return;
   told.add(p.id);
   const what = p.action === 'browse' ? (p.path ? `查看文件夹 ${p.path}` : '查看本机的磁盘列表') : p.action ? `${CHANGE[p.action]} ${p.name}` : `执行 Shell 命令：${p.command}`;
-  asking = { key: `ask:${p.id}`, at: Date.now(), title: '有请求待审批', text: `服务器请求${clip(what, 120)}。单击此处打开渲染站审批，请在 5 分钟内处理。` };
+  asking = { key: `ask:${p.id}`, at: Date.now(), title: '有请求待审批', text: `服务器请求${clip(what, 120)}。单击此处打开 daumhost 审批，请在 5 分钟内处理。` };
 }
 /** for the tray icon, a line each: the mode, its tip, the pause item, what to tell of (its key, its
  *  title and text), starting with Windows and the shortcuts (1 or 0), whether to start itself again
@@ -518,16 +518,16 @@ function trayView() {
   const mode = running.size ? 'busy' : tunnel.state === 'up' ? 'idle' : tunnel.state;
   const waiting = queued.size ? `，另有 ${queued.size} 个任务排队` : '';
   const busy = running.size === 1 ? `执行中：${running.values().next().value.what}${waiting}` : `正在执行 ${running.size} 个任务${waiting}`;
-  const tip = { busy, idle: `空闲，已连接服务器（端口 ${tunnel.port}）`, connecting: '正在连接服务器', retry: '无法连接服务器，将自动重试', auth: '无法登录服务器，请打开渲染站查看', off: '已暂停接收任务', unset: '尚未配置服务器，请在设置中填写' }[mode] ?? mode;
+  const tip = { busy, idle: `空闲，已连接服务器（端口 ${tunnel.port}）`, connecting: '正在连接服务器', retry: '无法连接服务器，将自动重试', auth: '无法登录服务器，请打开 daumhost 查看', off: '已暂停接收任务', unset: '尚未配置服务器，请在设置中填写' }[mode] ?? mode;
   const last = jobs[0];
   const ended = last && {
     key: `${last.id}@${last.started}`,
     at: last.started + (last.ms ?? 0),
-    ...(last.ok ? { title: '任务已完成', text: `${last.what}，耗时 ${took(last.ms)}，结果已返回服务器。` } : { title: '任务失败', text: `${last.what}。详细输出见渲染站的「动态」页。` }),
+    ...(last.ok ? { title: '任务已完成', text: `${last.what}，耗时 ${took(last.ms)}，结果已返回服务器。` } : { title: '任务失败', text: `${last.what}。详细输出见 daumhost 的「动态」页。` }),
   };
   const tell = asking && (!ended || asking.at > ended.at) ? asking : ended;
   const v = view();
-  return [mode, `渲染站 · ${tip}`, tunnel.state === 'off' ? '恢复接收任务' : '暂停接收任务', tell?.key ?? '', tell?.title ?? '', tell?.text ?? '', v.autostart ? '1' : '0', v.shortcut ? '1' : '0', trayAgain ? '1' : '0', config.clipboard ? '1' : '0']
+  return [mode, `daumhost · ${tip}`, tunnel.state === 'off' ? '恢复接收任务' : '暂停接收任务', tell?.key ?? '', tell?.title ?? '', tell?.text ?? '', v.autostart ? '1' : '0', v.shortcut ? '1' : '0', trayAgain ? '1' : '0', config.clipboard ? '1' : '0']
     .map((s) => String(s).replace(/\s*\n\s*/g, ' '))
     .join('\n');
 }
@@ -895,7 +895,7 @@ const body = (req) =>
   });
 function quit() {
   quitting = true;
-  log('渲染站已退出');
+  log('daumhost 已退出');
   stop();
   setTimeout(() => process.exit(0), 300);
 }
@@ -972,7 +972,7 @@ const ui = createServer(async (req, res) => {
       if (typeof data.on !== 'boolean') throw new Error('on must be boolean');
       if (data.on) rmSync(NO_ELEVATE, { force: true });
       else writeFileSync(NO_ELEVATE, '');
-      note('station', data.on ? '打开渲染站时将申请管理员权限' : '打开渲染站时将不再申请管理员权限');
+      note('station', data.on ? '打开 daumhost 时将申请管理员权限' : '打开 daumhost 时将不再申请管理员权限');
     } else if (path === '/parallel') {
       if (!Number.isInteger(data.n) || data.n < 1 || data.n > 16) throw new Error('同时运行的任务数须为 1 到 16 之间的整数');
       config.parallel = data.n;
@@ -1009,7 +1009,7 @@ const ui = createServer(async (req, res) => {
         for (const w of list) {
           if (known.has(samePath(w.path))) continue;
           const taken = adopt(w, config.env);
-          if (taken.length) note('station', `已从旧版渲染站的设置中导入工作区 ${resolveWorkspaces([w])[0].name} 的 ${taken.length} 项设置：${taken.join('、')}`);
+          if (taken.length) note('station', `已从旧版 daumhost 的设置中导入工作区 ${resolveWorkspaces([w])[0].name} 的 ${taken.length} 项设置：${taken.join('、')}`);
         }
         config.workspaces = list;
       }
@@ -1023,7 +1023,7 @@ const ui = createServer(async (req, res) => {
     } else if (path === '/shortcut') {
       config.shortcut = !!data.on;
       save();
-      note('station', data.on ? '已在桌面和开始菜单中创建「渲染站」快捷方式' : '已删除桌面和开始菜单中的「渲染站」快捷方式');
+      note('station', data.on ? '已在桌面和开始菜单中创建「daumhost」快捷方式' : '已删除桌面和开始菜单中的「daumhost」快捷方式');
     } else if (path === '/clipboard') {
       if (typeof data.on !== 'boolean') throw new Error('on must be boolean');
       config.clipboard = data.on;
@@ -1064,7 +1064,7 @@ ui.on('error', (e) => {
   throw e;
 });
 ui.listen(UI, '127.0.0.1', () => {
-  note('station', `渲染站已启动${admin ? '（以管理员身份运行）' : ''}，窗口地址：http://127.0.0.1:${UI}`);
+  note('station', `daumhost 已启动${admin ? '（以管理员身份运行）' : ''}，窗口地址：http://127.0.0.1:${UI}`);
   if (installed) clearOld(STAGE);
   // the one job folder of versions before jobs ran side by side
   rmSync(join(dir, 'job'), { recursive: true, force: true });

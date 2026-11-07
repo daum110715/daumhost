@@ -1,17 +1,17 @@
-# Render Station (渲染站)
+# daumhost
 
 English | [中文](README.zh-CN.md)
 
-Render Station lets agents running on a server hand heavy jobs to another computer, currently a Windows machine. The machine that runs the jobs connects to the server through a reverse SSH tunnel, so it needs no public IP address and no open inbound port.
+daumhost lets agents running on a server hand heavy jobs to another computer, currently a Windows machine. The machine that runs the jobs connects to the server through a reverse SSH tunnel, so it needs no public IP address and no open inbound port.
 
-The name comes from its first use, rendering; it takes any heavy job from any project. The station's own window and messages are in Chinese.
+It takes any heavy job from any project. Its own window and messages are in Chinese.
 
 ## Terms
 
 | Term | Meaning |
 |---|---|
 | Server | The machine that runs the agents and submits jobs, usually Linux. |
-| Device | The Windows computer that runs the station and executes jobs. |
+| Device | The Windows computer that runs daumhost and executes jobs. |
 | Station | The tray program `渲染站.exe` together with the background process `station.mjs`. It manages the worker, the tunnel and the settings window. |
 | Worker | `worker.mjs`. It listens on the device's `127.0.0.1:7700` and executes jobs. |
 | Workspace | A folder registered on the device. Jobs run only in registered workspaces. |
@@ -19,8 +19,8 @@ The name comes from its first use, rendering; it takes any heavy job from any pr
 
 ## How it works
 
-1. On the device, the station starts the worker and opens a reverse tunnel to the server: `ssh -N -R 77xx:127.0.0.1:7700 -p <port> <user>@<server>`. The server-side port starts at 7700. If a port is still held by a dead connection, the station tries the next one, up to 7709.
-2. On the server, the command-line tool `rs` (`cli.mjs`) probes these ports and submits the job to the worker that answers.
+1. On the device, daumhost starts the worker and opens a reverse tunnel to the server: `ssh -N -R 77xx:127.0.0.1:7700 -p <port> <user>@<server>`. The server-side port starts at 7700. If a port is still held by a dead connection, daumhost tries the next one, up to 7709.
+2. On the server, the command-line tool `daumhost` (`cli.mjs`) probes these ports and submits the job to the worker that answers.
 3. There are two kinds of job:
    - **Preset jobs.** The caller brings the files the preset allows (for example a script and its input). The device runs the preset's command in a job folder of its own, `.tools/remote/jobs/<number>/`, and, on success, sends back the files in the preset's output folder.
    - **Shell jobs.** A command runs in a workspace, subject to local authorization on the device (see "Shell permissions").
@@ -30,7 +30,7 @@ The worker can run several jobs at once:
 
 - How many run at once is set on the device under 设置 → 本机 → 同时运行的任务数 (Settings → This computer → Jobs at once): 2 by default, 1–16.
 - A workspace's presets run one at a time by default, since they may use the same files; the workspace file can allow more with `parallel`. Shell jobs count only toward the total.
-- Jobs beyond the limit wait in the order they came; `rs` waits with them and says how many are ahead. A waiting job is cancelled if its submitter disconnects. At most 16 jobs can wait; beyond that, new jobs are refused.
+- Jobs beyond the limit wait in the order they came; `daumhost` waits with them and says how many are ahead. A waiting job is cancelled if its submitter disconnects. At most 16 jobs can wait; beyond that, new jobs are refused.
 
 ## Requirements
 
@@ -49,16 +49,16 @@ Server: Node.js 18 or later and a checkout of this repository.
 
 1. Download the installer: <https://8.137.206.169/assets/render-station/render-station-setup.exe> (about 40 MB, Node.js included).
 2. Run it. The installer is not code-signed, so Windows may say "Windows protected your PC"; click "More info", then "Run anyway".
-3. Click 安装 (Install). The station is installed for the current user in `%LOCALAPPDATA%\Programs\render-station\`, without administrator rights; it then starts and creates 渲染站 shortcuts on the desktop and in the Start menu.
+3. Click 安装 (Install). daumhost is installed for the current user in `%LOCALAPPDATA%\Programs\render-station\`, without administrator rights; it then starts and creates daumhost shortcuts on the desktop and in the Start menu.
 4. In the window's 设置 → 连接 (Settings → Connection) page, enter the server's SSH address and port; then register workspaces in 设置 → 工作区 (Settings → Workspaces). Changes are saved as they are made.
 
-The installer first closes a running station. Running a newer installer installs over the old copy and keeps the settings. To uninstall, find 渲染站 under Windows Settings → Apps → Installed apps and choose Uninstall; you can choose whether to keep the settings and the jobs' output.
+The installer first closes a running station. Running a newer installer installs over the old copy and keeps the settings. To uninstall, find daumhost under Windows Settings → Apps → Installed apps and choose Uninstall; you can choose whether to keep the settings and the jobs' output.
 
 A checkout of this repository also runs as it is: clone it, run `npm install` in its root, and double-click `渲染站.exe`. This needs Node.js and Git on the device and updates through Git (see "Automatic updates"). `渲染站.exe` must stay in the same folder as `station.mjs`.
 
 ### Server
 
-Clone this repository and run `npm link` in it. This installs the commands `render-station` and `rs` (see "Command line"); without it, run `node cli.mjs` from the checkout instead.
+Clone this repository and run `npm link` in it. This installs the commands `daumhost`, `render-station` and `daumhost` (see "Command line"); without it, run `node cli.mjs` from the checkout instead.
 
 ## Configuration
 
@@ -66,7 +66,7 @@ The settings are stored in `.tools/remote/config.json` and edited in the window'
 
 ### Server
 
-In Settings → Connection. Write the SSH address as `user@server`. The port is the server's SSH port; when empty, 22 is used. The station opens no tunnel until an address is set. Changing either reconnects the tunnel.
+In Settings → Connection. Write the SSH address as `user@server`. The port is the server's SSH port; when empty, 22 is used. daumhost opens no tunnel until an address is set. Changing either reconnects the tunnel.
 
 ### Workspaces
 
@@ -74,29 +74,29 @@ In Settings → Workspaces. Each workspace is a block showing its name, its path
 
 | Item | Description |
 |---|---|
-| Name | The name the server uses to call its presets. When empty, the station uses the `name` in the workspace file, then the folder name. Letters, digits, `.`, `_` and `-` only; names must be unique. |
+| Name | The name the server uses to call its presets. When empty, daumhost uses the `name` in the workspace file, then the folder name. Letters, digits, `.`, `_` and `-` only; names must be unique. |
 | Path | The folder on the device. |
 | Settings the workspace file declares | Once the path is set, the fields from the file's `env` are listed. While a required field is empty, the workspace's presets are refused. |
 | Other environment variables | One `NAME=value` per line, also passed to the workspace's jobs. |
 
-An opened workspace lists its presets. A field is saved when you leave it, a switch when you flip it. 添加工作区 (Add workspace) takes a name and a path; 移除工作区 (Remove workspace) asks first and leaves the folder alone. The station rereads a workspace file when it changes; no restart is needed.
+An opened workspace lists its presets. A field is saved when you leave it, a switch when you flip it. 添加工作区 (Add workspace) takes a name and a path; 移除工作区 (Remove workspace) asks first and leaves the folder alone. daumhost rereads a workspace file when it changes; no restart is needed.
 
 When a workspace is added, in the Settings page or by the server, and its folder still holds an old station's `.tools\remote\config.json`, the settings there that the workspace file's `env` declares and that are not yet filled in are imported.
 
-The server can also add, change and remove workspaces with `rs workspace`, as far as 服务器管理工作区 (Server manages workspaces) under Settings → Permissions and approvals allows (see "Command line").
+The server can also add, change and remove workspaces with `daumhost workspace`, as far as 服务器管理工作区 (Server manages workspaces) under Settings → Permissions and approvals allows (see "Command line").
 
-**Registering a workspace trusts its presets.** Presets run without approval. If a preset lets the caller upload a script and runs it, the caller can run any code on the device with the rights of the account the station runs under.
+**Registering a workspace trusts its presets.** Presets run without approval. If a preset lets the caller upload a script and runs it, the caller can run any code on the device with the rights of the account daumhost runs under.
 
 ### Permissions and approvals
 
-- 服务器管理工作区 (Server manages workspaces): what the server may do with `rs workspace` and `rs ls`. 关闭 (Off), it can neither change workspaces nor list folders; 需要审批 (Ask, the default), each change, and each folder listing outside the registered workspaces, must be approved in the device's window; 无需审批 (Allow), it does all of these directly.
+- 服务器管理工作区 (Server manages workspaces): what the server may do with `daumhost workspace` and `daumhost ls`. 关闭 (Off), it can neither change workspaces nor list folders; 需要审批 (Ask, the default), each change, and each folder listing outside the registered workspaces, must be approved in the device's window; 无需审批 (Allow), it does all of these directly.
 - 同步剪贴板 (Sync clipboard): off by default; see "Clipboard sync".
 - Shell jobs, YOLO mode and the allowlist: see "Shell permissions".
 
 ### This computer
 
 - 同时运行的任务数 (Jobs at once): see "How it works".
-- 以管理员身份运行 (Run as administrator), on the 总览 (Overview) page under 本机: on by default. Each time the station starts, including with Windows, Windows asks through User Account Control whether it may run as administrator; if the answer is no, it runs with normal rights. While it runs as administrator, presets and Shell commands do too. When it runs with normal rights, the button 以管理员身份重新启动 (Restart as administrator) asks again; it needs no jobs running or waiting. Turned off, the station no longer asks from its next start on.
+- 以管理员身份运行 (Run as administrator), on the 总览 (Overview) page under 本机: on by default. Each time daumhost starts, including with Windows, Windows asks through User Account Control whether it may run as administrator; if the answer is no, it runs with normal rights. While it runs as administrator, presets and Shell commands do too. When it runs with normal rights, the button 以管理员身份重新启动 (Restart as administrator) asks again; it needs no jobs running or waiting. Turned off, daumhost no longer asks from its next start on.
 
 These switches are on by default; turning one off undoes its effect:
 
@@ -145,7 +145,7 @@ The top-level `parallel` (1–16, default 1) sets how many of the workspace's pr
 
 | Field | Description |
 |---|---|
-| `command` | Required. An argument list whose first item is the program; `node` means the station's own Node.js. No shell interprets it. `"{args}"` expands to the caller's arguments and may appear at most once. |
+| `command` | Required. An argument list whose first item is the program; `node` means daumhost's own Node.js. No shell interprets it. `"{args}"` expands to the caller's arguments and may appear at most once. |
 | `args` | The arguments accepted, as a list of regular expressions; each argument must fully match one of them. When omitted, no arguments are accepted. |
 | `upload` | The files a caller may bring, as relative globs (`*` and `?` stay within a folder, `**` crosses folders). The server collects matching files from the `--src` folder; the device accepts only matching files and puts them in the job folder. |
 | `collect` | When the command succeeds (exit code 0), the files in this folder are sent back to the server. |
@@ -153,15 +153,15 @@ The top-level `parallel` (1–16, default 1) sets how many of the workspace's pr
 | `cwd` | The working directory; defaults to `{workspace}`. |
 | `env` | Additional environment variables. |
 | `timeout` | Time limit in seconds, 1–86400; no limit when omitted. |
-| `description` | Shown in the Settings page and by `rs status` and `rs presets`. |
+| `description` | Shown in the Settings page and by `daumhost status` and `daumhost presets`. |
 
 `command`, `cwd`, `env` and `collect` may use two placeholders: `{job}`, the job folder (`.tools/remote/jobs/<number>/` on the device, one per job, removed when it ends), and `{workspace}`, the workspace's path.
 
 ### The general workspace `common`
 
-A project needs no workspace of its own to use the machine: `rs run --src <dir> --out <dir> common/node [args…]` brings that folder, runs its `main.mjs` and fetches what it writes in `out/`. For a browser, copy `kit/chrome.mjs` next to the script (headless Chrome or Edge over CDP). The workspace file is `kit/render-station.json`: put it in the folder `rs ws add common F:/project/common --create` makes. Do not borrow another project's presets.
+A project needs no workspace of its own to use the machine: `daumhost run --src <dir> --out <dir> common/node [args…]` brings that folder, runs its `main.mjs` and fetches what it writes in `out/`. For a browser, copy `kit/chrome.mjs` next to the script (headless Chrome or Edge over CDP). The workspace file is `kit/render-station.json`: put it in the folder `daumhost ws add common F:/project/common --create` makes. Do not borrow another project's presets.
 
-## Using the station
+## Using daumhost
 
 ### Tray icon
 
@@ -172,10 +172,10 @@ The tray icon's color shows the state:
 | Green | Idle, waiting for jobs |
 | Purple | Running jobs |
 | Yellow | Connecting |
-| Red | Cannot log in to the server, or the station cannot start |
+| Red | Cannot log in to the server, or daumhost cannot start |
 | Gray | Paused, or no server set |
 
-Click the icon to open the window. The right-click menu has 打开渲染站 (Open), 暂停接收任务 (Pause; 恢复接收任务, Resume, while paused), 重新连接 (Reconnect), 在浏览器中打开 (Open in browser), 查看日志 (View log) and 退出渲染站 (Quit). A notification appears when a job finishes, and when a request from the server awaits approval; clicking it opens the window.
+Click the icon to open the window. The right-click menu has 打开 daumhost (Open), 暂停接收任务 (Pause; 恢复接收任务, Resume, while paused), 重新连接 (Reconnect), 在浏览器中打开 (Open in browser), 查看日志 (View log) and 退出 daumhost (Quit). A notification appears when a job finishes, and when a request from the server awaits approval; clicking it opens the window.
 
 ### Window
 
@@ -192,89 +192,89 @@ Lines of the form `progress 12/300` in a job's output are read as progress: show
 
 ### State and logs
 
-After the device wakes from sleep, loses the network, or the worker exits, the station reopens the tunnel and restarts the worker on its own. The log is `.tools/remote/station.log`; open it from the tray menu's 查看日志 (View log) or from Settings → Updates and about.
+After the device wakes from sleep, loses the network, or the worker exits, daumhost reopens the tunnel and restarts the worker on its own. The log is `.tools/remote/station.log`; open it from the tray menu's 查看日志 (View log) or from Settings → Updates and about.
 
-While the tunnel is open, anyone who can log in to the server can run the device's presets. Pause the station (in the window or the tray menu) when it is not needed; pausing closes the tunnel.
+While the tunnel is open, anyone who can log in to the server can run the device's presets. Pause daumhost (in the window or the tray menu) when it is not needed; pausing closes the tunnel.
 
 ## Command line
 
-On the server, `render-station` (short name `rs`) submits jobs and manages the device's workspaces. Install it with `npm link` in the checkout (see "Installation"). The full manual, with every option, the JSON output and the exit codes, is [docs/cli.md](docs/cli.md); `rs help <command>` shows the same in brief.
+On the server, `daumhost` submits jobs and manages the device's workspaces. Install it with `npm link` in the checkout (see "Installation"). The full manual, with every option, the JSON output and the exit codes, is [docs/cli.md](docs/cli.md); `daumhost help <command>` shows the same in brief.
 
 | Command | Purpose |
 |---|---|
-| `rs status` | Whether the device is reached, the jobs running and waiting, and the workspaces. |
-| `rs presets [<workspace>]` | The presets and the arguments they take. |
-| `rs run <workspace>/<preset> [args…]` | Run a preset, bringing the files it takes from the current folder (`--src`), and save what it makes (`--out`). |
-| `rs shell <command…>` | Run a command in a workspace, as the Shell permissions allow. |
-| `rs workspace [list\|add\|set\|remove]` | List the workspaces, or change them; `--create` makes a missing folder. |
-| `rs ls [<path>]` | List a folder on the device, or its drives. |
-| `rs clip [ls\|set]` | Read what was copied on the device, or put something on its clipboard; see "Clipboard sync". |
+| `daumhost status` | Whether the device is reached, the jobs running and waiting, and the workspaces. |
+| `daumhost presets [<workspace>]` | The presets and the arguments they take. |
+| `daumhost run <workspace>/<preset> [args…]` | Run a preset, bringing the files it takes from the current folder (`--src`), and save what it makes (`--out`). |
+| `daumhost shell <command…>` | Run a command in a workspace, as the Shell permissions allow. |
+| `daumhost workspace [list\|add\|set\|remove]` | List the workspaces, or change them; `--create` makes a missing folder. |
+| `daumhost ls [<path>]` | List a folder on the device, or its drives. |
+| `daumhost clip [ls\|set]` | Read what was copied on the device, or put something on its clipboard; see "Clipboard sync". |
 
 ```sh
-rs ls F:/
-rs ws add video F:/projects/video
-rs presets video
-rs run video/transcode --crf 23
+daumhost ls F:/
+daumhost ws add video F:/projects/video
+daumhost presets video
+daumhost run video/transcode --crf 23
 ```
 
 - Every command takes `--json` and then prints one JSON object.
 - When the device already runs as many jobs as it allows, a job waits its turn; interrupting the command cancels it.
-- `rs workspace` changes and `rs ls` outside the registered workspaces depend on the device's 服务器管理工作区 (Server manages workspaces); by default each request waits up to 5 minutes for approval in the device's window. An approved folder stays open to `rs ls`, with everything under it, for 10 minutes.
+- `daumhost workspace` changes and `daumhost ls` outside the registered workspaces depend on the device's 服务器管理工作区 (Server manages workspaces); by default each request waits up to 5 minutes for approval in the device's window. An approved folder stays open to `daumhost ls`, with everything under it, for 10 minutes.
 - Commands and settings passed to the device are shown in approval dialogs and written to its log; never put keys or passwords in them.
 
 ## Shell permissions
 
-The station refuses Shell jobs by default. Enable them on the device under 设置 → 权限与审批 (Settings → Permissions and approvals); they start in auto mode.
+daumhost refuses Shell jobs by default. Enable them on the device under 设置 → 权限与审批 (Settings → Permissions and approvals); they start in auto mode.
 
 ### Auto mode
 
 - The actual working directory, after resolving symbolic links, must be inside the chosen workspace.
 - A command runs automatically when the full command and the working directory exactly match an allowlist entry. Nothing is allowed by interpreter or command prefix.
-- Otherwise the request waits for approval in the station's window (a dialog appears while the window is open, and the tray icon shows a notification that opens the window when clicked), with the choices 拒绝 (Deny), 仅本次允许 (Allow once) and 允许并加入白名单 (Allow and add to the allowlist). Several requests are shown one after another, in the order they came. A request not approved within 5 minutes fails.
+- Otherwise the request waits for approval in daumhost's window (a dialog appears while the window is open, and the tray icon shows a notification that opens the window when clicked), with the choices 拒绝 (Deny), 仅本次允许 (Allow once) and 允许并加入白名单 (Allow and add to the allowlist). Several requests are shown one after another, in the order they came. A request not approved within 5 minutes fails.
 - The allowlist is stored in the device's `.tools/remote/config.json`; entries can be removed in Settings → Permissions and approvals.
 
 ### YOLO mode
 
-- To enable it: run the station as administrator (on Windows, choose Yes when User Account Control asks as it starts, or click 以管理员身份重新启动 on the Overview page; elsewhere, run it as root); then turn on YOLO in Settings → Permissions and approvals and confirm.
-- The station checks that its process has administrator rights; then any command and any working directory are allowed. With no workspace registered, working directories are relative to the user's home folder.
+- To enable it: run daumhost as administrator (on Windows, choose Yes when User Account Control asks as it starts, or click 以管理员身份重新启动 on the Overview page; elsewhere, run it as root); then turn on YOLO in Settings → Permissions and approvals and confirm.
+- daumhost checks that its process has administrator rights; then any command and any working directory are allowed. With no workspace registered, working directories are relative to the user's home folder.
 - The mode is kept in memory only. Pausing, reconnecting or restarting returns to auto mode.
 
 ### Security boundaries
 
 - The job protocol has no way to change the allowlist or switch the Shell mode. These happen only in the device's Settings page; the server cannot turn on YOLO mode.
 - Whether the server may register, change or remove workspaces, make folders for them, and list folders outside them is up to 服务器管理工作区 on the device, which only the device can change. By default each request must be approved there. Set to 无需审批 (Allow), anyone who can log in to the server can list any folder, register any folder and run its presets, which amounts to running any code. Listing shows names, sizes and times, never file contents.
-- This is an authorization mechanism, not an operating-system sandbox. An approved command can read and write files with all the rights of the station's account; the directory check constrains only the initial working directory.
+- This is an authorization mechanism, not an operating-system sandbox. An approved command can read and write files with all the rights of daumhost's account; the directory check constrains only the initial working directory.
 - The allowlist records command text and does not pin the content of scripts the command uses. If a script changes, the same command still runs automatically.
 - Presets do not go through the Shell allowlist; for the trust they carry, see "Workspaces".
-- Run as administrator, the station and everything it runs have administrator rights, so a preset or an approved command can change system settings and any file. Windows asks through User Account Control each time; turn off 以管理员身份运行 to stop it asking.
+- Run as administrator, daumhost and everything it runs have administrator rights, so a preset or an approved command can change system settings and any file. Windows asks through User Account Control each time; turn off 以管理员身份运行 to stop it asking.
 - A pending command, workspace change or folder listing never takes effect after a denial, an approval timeout, or the submitter disconnecting.
-- Turning off Shell permissions or pausing refuses further jobs and cancels pending requests, waiting jobs and YOLO mode, but does not stop a command already running. When a command times out or its submitter disconnects, the station tries to end its process tree.
+- Turning off Shell permissions or pausing refuses further jobs and cancels pending requests, waiting jobs and YOLO mode, but does not stop a command already running. When a command times out or its submitter disconnects, daumhost tries to end its process tree.
 - Mode changes, pending requests, manual decisions, executed commands, working directories, results, workspace changes and folders listed outside the workspaces are written to the device's `.tools/remote/station.log`.
 
 ## Clipboard sync
 
 With 同步剪贴板 (Sync clipboard) on in 设置 → 权限与审批 (Settings → Permissions and approvals), the device and the server share the clipboard:
 
-- Text and pictures copied on the device are written over SSH to `~/.render-station/clipboard/` on the server within about a second: the newest as `latest.txt` or `latest.png` (pictures always become PNG), the last 50 in `history/`. Of several copied in a row, only the last is sent; while the tunnel is down, the newest is sent once it is back. The folder is in the home of the account the device logs in as, the one the password file names; `rs` and `xclip` look there and in `$HOME` when that differs from it, and read what came last.
-- The server puts text or a picture on the device's clipboard with `rs clip set`; what it puts there is not sent back.
-- On the server, `rs clip` prints the newest (for a picture, its path) and `rs clip ls` lists the history. Both read the files on the server and do not need the device.
+- Text and pictures copied on the device are written over SSH to `~/.render-station/clipboard/` on the server within about a second: the newest as `latest.txt` or `latest.png` (pictures always become PNG), the last 50 in `history/`. Of several copied in a row, only the last is sent; while the tunnel is down, the newest is sent once it is back. The folder is in the home of the account the device logs in as, the one the password file names; `daumhost` and `xclip` look there and in `$HOME` when that differs from it, and read what came last.
+- The server puts text or a picture on the device's clipboard with `daumhost clip set`; what it puts there is not sent back.
+- On the server, `daumhost clip` prints the newest (for a picture, its path) and `daumhost clip ls` lists the history. Both read the files on the server and do not need the device.
 - What a password manager or similar program marks as not to be recorded, and anything over 20 MB, is not synced.
 - Syncing shows no notification; the feed and the log record its direction, type and size, never the content.
-- With `rs` linked as `xclip`, programs on the server that use xclip for the clipboard use the device's: Claude Code there pastes a picture copied on the device, for example. See "clip" in [docs/cli.md](docs/cli.md).
+- With `daumhost` linked as `xclip`, programs on the server that use xclip for the clipboard use the device's: Claude Code there pastes a picture copied on the device, for example. See "clip" in [docs/cli.md](docs/cli.md).
 
 ```sh
-rs clip
-git diff | rs clip set
-rs clip set --file shot.png
+daumhost clip
+git diff | daumhost clip set
+daumhost clip set --file shot.png
 ```
 
 ## Automatic updates
 
-When enabled, the station checks one minute after starting and every 30 minutes after that; the 立即检查 (Check now) button in Settings → Updates and about checks immediately. While jobs run, wait or await approval, the update waits until all are over. When the station's own files change, it restarts itself; when `渲染站.exe` changes, the tray program replaces itself with the new version.
+When enabled, daumhost checks one minute after starting and every 30 minutes after that; the 立即检查 (Check now) button in Settings → Updates and about checks immediately. While jobs run, wait or await approval, the update waits until all are over. When daumhost's own files change, it restarts itself; when `渲染站.exe` changes, the tray program replaces itself with the new version.
 
 **A copy installed by the installer** takes new versions from the update server, `https://8.137.206.169/assets/render-station/`:
 
-- The server's `latest.json` lists every file of the newest version with its SHA-256 and carries an Ed25519 signature by the release key. The station accepts only a validly signed release with a higher version number.
+- The server's `latest.json` lists every file of the newest version with its SHA-256 and carries an Ed25519 signature by the release key. daumhost accepts only a validly signed release with a higher version number.
 - Only changed files are downloaded (`files/<SHA-256>.gz`). Each is checked before any is put in place, and if one cannot be put in place, all are restored. Replaced files are first renamed `*.old` and deleted at the next start.
 - `release.json` in the installed folder records the current version.
 
@@ -286,7 +286,7 @@ When enabled, the station checks one minute after starting and every 30 minutes 
 
 - When started, it copies itself and `WebView2Loader.dll` to `%LOCALAPPDATA%\render-station\` and runs from there, so the installed (or repository) exe is never locked and updates can replace it.
 - Starts `station.mjs` in the background and restarts it whenever it exits, with the installed folder's `node\node.exe` if there is one, else the system's Node.js.
-- Puts the station, ssh and the jobs' processes in one job object, so they all end when it quits.
+- Puts daumhost, ssh and the jobs' processes in one job object, so they all end when it quits.
 - Started without administrator rights, it asks for them through User Account Control (`runas`) and leaves the rest to the copy so started, unless `.tools\remote\no-elevate` exists (以管理员身份运行 turned off); if the answer is no, it goes on with normal rights. A restart after an update keeps the rights it had without asking again. Run as administrator, it still takes the messages of processes without those rights: a second start opening the window, the installer asking it to quit, and Explorer's.
 - The window's position, size and maximized state are kept in the registry under `HKCU\Software\render-station`; uninstalling removes them.
 - `渲染站.exe --uninstall` uninstalls a copy the installer installed; Windows' Installed apps runs it.
@@ -314,7 +314,7 @@ Run this way, there is no approval interface, so only presets run, and the serve
 - Tests: `node --test`.
 - Build `渲染站.exe`: `node exe/build.mjs`. It gathers the sources, the resources, the icons and the WebView2 SDK's header and `WebView2Loader.dll` (the SDK is the NuGet package `Microsoft.Web.WebView2`, unpacked in `.tools/webview2/`) in `.tools/exe-build/`, and `exe/compile.mjs` compiles them into the repository root. It also builds the installer's program, `.tools/exe-build/setup.exe`.
   - When the device is reached and set up for it, it compiles there, with the preset `render-station/exe`; otherwise here, with mingw-w64 (`x86_64-w64-mingw32-gcc`). `--local` always compiles here.
-  - Setting up the device: register the station's own installed folder as the workspace `render-station` (its `render-station.json` offers the preset) and set its `MINGW` to mingw-w64's `bin` folder, such as [w64devkit](https://github.com/skeeto/w64devkit)'s `w64devkit\bin`. The preset compiles what it is brought and runs none of it.
+  - Setting up the device: register daumhost's own installed folder as the workspace `render-station` (its `render-station.json` offers the preset) and set its `MINGW` to mingw-w64's `bin` folder, such as [w64devkit](https://github.com/skeeto/w64devkit)'s `w64devkit\bin`. The preset compiles what it is brought and runs none of it.
   - `node exe/build.mjs --try`: compiled on the device, the new `渲染站.exe` is started there with `--try` by a Shell job, which the owner approves on the device.
 - After changing anything in `exe/`, rebuild and commit `渲染站.exe` together with the sources.
 
@@ -330,18 +330,18 @@ The release key's private half is `.tools/release/key.pem`, outside version cont
 
 | Path | Description |
 |---|---|
-| `cli.mjs` | The command-line tool on the server, installed as `render-station` and `rs`. |
+| `cli.mjs` | The command-line tool on the server, installed as `daumhost`, `render-station` and `daumhost`. |
 | `docs/` | The command-line manual (`cli.md`, `cli.zh-CN.md`). |
 | `update.mjs` | Updates of an installed copy: checking a release's signature, and fetching, checking and replacing files. |
 | `worker.mjs` | The worker: receives jobs, queues and runs them and returns the results; passes on the server's workspace changes and folder listings. |
 | `workspace.mjs` | Reading and checking workspace files, globs, presets' commands and output, checking workspace changes, importing old settings, and listing folders. |
 | `shell.mjs` | Approval, allowlist and execution of Shell jobs, and the approval queue. |
-| `station.mjs` | The station's background process: manages the worker, the tunnel and the settings, and serves the window at `127.0.0.1:7799`. |
-| `station.html` | The station's window. |
+| `station.mjs` | daumhost's background process: manages the worker, the tunnel and the settings, and serves the window at `127.0.0.1:7799`. |
+| `station.html` | daumhost's window. |
 | `渲染站.exe` | The built tray program. |
 | `WebView2Loader.dll` | The WebView2 loader the tray program's window needs. |
 | `exe/` | The tray program's sources (`station.c`, `station.rc`, `station.manifest`), the installer's (`setup.c`, `setup.rc`), `common.h` shared by both, and the build scripts: `build.mjs` gathers the files and chooses where to compile, `compile.mjs` runs mingw-w64. |
-| `render-station.json` | The station's own workspace file: with its installed folder registered as a workspace, it offers the preset `exe`, which compiles `渲染站.exe` on the device. |
+| `render-station.json` | daumhost's own workspace file: with its installed folder registered as a workspace, it offers the preset `exe`, which compiles `渲染站.exe` on the device. |
 | `release/` | Release scripts: `build.mjs` packs and signs, `publish.mjs` uploads to the update server. |
 | `*.test.mjs` | Tests. |
 | `release.json` | Only in an installed copy: the signed manifest of its version. |

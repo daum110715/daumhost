@@ -1,11 +1,11 @@
-// 渲染站.exe, the render station's tray icon on the Windows machine that takes the server's heavy
+// 渲染站.exe, daumhost's tray icon on the Windows machine that takes the server's heavy
 // work, and what its owner double-clicks. It starts the station (station.mjs, with node) with no
 // window at all, starts it again whenever it stops, and shows in its colour how it is doing (green
 // waiting, purple at work, amber connecting, red stuck, grey paused); a click opens the station's window: a
 // window of its own with no frame but the page's (station.html in WebView2, through
 // WebView2Loader.dll beside it), or failing that Edge's app window. The page drags it, minimizes
 // and closes it, and opens what a job made, by messages. It keeps what the settings ask for: starting with
-// Windows (a value under HKCU\...\Run, so it shows in Task Manager's startup apps) and 渲染站 on
+// Windows (a value under HKCU\...\Run, so it shows in Task Manager's startup apps) and daumhost on
 // the desktop and in the Start menu. The station and all it starts (ssh, the jobs and what they
 // start) run in a job object, so quitting, or this ending any other way, ends them too. Only one
 // runs: a second one opens the window and goes. It stays in the checkout beside station.mjs, but runs
@@ -52,7 +52,7 @@
 
 #define UI_PORT 7799
 #define WM_TRAY (WM_APP + 1)
-#define TITLE L"渲染站"
+#define TITLE L"daumhost"
 // a trial's names, which no station looks for
 #define TRY_CLASS L"RenderStationTry"
 #define TRY_MUTEX L"Local\\render-station-try"
@@ -414,7 +414,7 @@ static void addIcon(void) {
   nid.uFlags = NIF_ICON | NIF_TIP | NIF_MESSAGE | NIF_SHOWTIP;
   nid.uCallbackMessage = WM_TRAY;
   if (!nid.hIcon) nid.hIcon = icons[ICON_OFF];
-  if (!nid.szTip[0]) lstrcpynW(nid.szTip, L"渲染站 · 正在启动", 128);
+  if (!nid.szTip[0]) lstrcpynW(nid.szTip, L"daumhost · 正在启动", 128);
   Shell_NotifyIconW(NIM_ADD, &nid);
   nid.uVersion = NOTIFYICON_VERSION_4;
   Shell_NotifyIconW(NIM_SETVERSION, &nid);
@@ -905,7 +905,7 @@ static int makeFrame(void) {
   SystemParametersInfoW(SPI_GETWORKAREA, 0, &work, 0);
   int w = DIP(840), h = DIP(940);
   if (h > work.bottom - work.top - DIP(32)) h = work.bottom - work.top - DIP(32);
-  frame = CreateWindowExW(0, L"RenderStationWindow", trying ? L"渲染站（试运行）" : TITLE, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CLIPCHILDREN,
+  frame = CreateWindowExW(0, L"RenderStationWindow", trying ? L"daumhost（试运行）" : TITLE, WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_CLIPCHILDREN,
                           work.left + (work.right - work.left - w) / 2, work.top + (work.bottom - work.top - h) / 2, w, h, NULL, NULL, inst, NULL);
   if (!frame) return 0;
   restorePlace();
@@ -977,7 +977,7 @@ static void link(int folder, int on) {
   IShellLinkW_SetPath(sl, launcher);
   IShellLinkW_SetWorkingDirectory(sl, dirOf);
   IShellLinkW_SetIconLocation(sl, launcher, 0);
-  IShellLinkW_SetDescription(sl, L"渲染站：为服务器运行高负载任务");
+  IShellLinkW_SetDescription(sl, L"daumhost：为服务器运行高负载任务");
   if (SUCCEEDED(IShellLinkW_QueryInterface(sl, &IID_IPersistFile, (void **)&pf))) {
     IPersistFile_Save(pf, path, TRUE);
     IPersistFile_Release(pf);
@@ -1118,7 +1118,7 @@ static void startStation(void) {
 static void down(void) {
   up = 0;
   // starting still
-  if (node && WaitForSingleObject(node, 0) == WAIT_TIMEOUT) return show(ICON_OFF, L"渲染站 · 正在启动");
+  if (node && WaitForSingleObject(node, 0) == WAIT_TIMEOUT) return show(ICON_OFF, L"daumhost · 正在启动");
   // stopped: soon after it started, again and again, means it cannot start
   if (node) {
     DWORD code = 0;
@@ -1133,12 +1133,12 @@ static void down(void) {
   if (fails >= 3) {
     if (!gaveUp) {
       gaveUp = 1;
-      balloon(L"渲染站无法启动", L"渲染站连续多次启动后立即退出，原因请查看日志（单击此处打开）。", NIIF_ERROR);
+      balloon(L"daumhost 无法启动", L"daumhost 连续多次启动后立即退出，原因请查看日志（单击此处打开）。", NIIF_ERROR);
     }
-    return show(ICON_BAD, L"渲染站 · 无法启动，请右键查看日志");
+    return show(ICON_BAD, L"daumhost · 无法启动，请右键查看日志");
   }
   startStation();
-  show(ICON_OFF, L"渲染站 · 正在启动");
+  show(ICON_OFF, L"daumhost · 正在启动");
 }
 // every two seconds: how the station is (/tray: mode, tip, the pause item, the newest job and
 // what to say of it, the two settings, whether it was updated, whether the clipboard goes to the
@@ -1162,7 +1162,7 @@ static void tick(void) {
   fails = 0;
   gaveUp = 0;
   const wchar_t *mode = f[0];
-  if (!wcscmp(mode, L"auth") && wcscmp(lastMode, L"auth")) balloon(L"无法登录服务器", L"自动连接须使用无需密码的密钥登录。单击此处打开渲染站查看详情。", NIIF_ERROR);
+  if (!wcscmp(mode, L"auth") && wcscmp(lastMode, L"auth")) balloon(L"无法登录服务器", L"自动连接须使用无需密码的密钥登录。单击此处打开 daumhost 查看详情。", NIIF_ERROR);
   lstrcpynW(lastMode, mode, 16);
   show(iconFor(mode), f[1]);
   lstrcpynW(toggleText, f[2], 32);
@@ -1224,13 +1224,13 @@ static void menu(int x, int y) {
     AppendMenuW(m, MF_STRING, CMD_LOG, L"查看试运行日志");
     AppendMenuW(m, MF_STRING, CMD_QUIT, L"结束试运行");
   } else {
-    AppendMenuW(m, MF_STRING, CMD_OPEN, L"打开渲染站");
+    AppendMenuW(m, MF_STRING, CMD_OPEN, L"打开 daumhost");
     AppendMenuW(m, MF_STRING | (up ? 0 : MF_GRAYED), CMD_TOGGLE, toggleText);
     AppendMenuW(m, MF_STRING | (up && !off ? 0 : MF_GRAYED), CMD_RECONNECT, L"重新连接");
     AppendMenuW(m, MF_SEPARATOR, 0, NULL);
     AppendMenuW(m, MF_STRING | (up ? 0 : MF_GRAYED), CMD_BROWSER, L"在浏览器中打开");
     AppendMenuW(m, MF_STRING, CMD_LOG, L"查看日志");
-    AppendMenuW(m, MF_STRING, CMD_QUIT, L"退出渲染站");
+    AppendMenuW(m, MF_STRING, CMD_QUIT, L"退出 daumhost");
   }
   SetMenuDefaultItem(m, CMD_OPEN, FALSE);
   SetForegroundWindow(hwnd);
@@ -1331,7 +1331,7 @@ static int uninstall(void) {
   wchar_t check[MAX_PATH + 32], content[MAX_PATH + 160];
   FMT(check, L"%ls\\release.json", exeDir);
   if (!isFile(check)) {
-    MessageBoxW(NULL, L"此渲染站不是由安装程序安装的，无法卸载。", L"卸载渲染站", MB_ICONERROR);
+    MessageBoxW(NULL, L"此 daumhost 不是由安装程序安装的，无法卸载。", L"卸载 daumhost", MB_ICONERROR);
     return 1;
   }
   FMT(content, L"将删除 %ls 中的程序文件，以及桌面和开始菜单中的快捷方式和开机自启项。", exeDir);
@@ -1340,16 +1340,16 @@ static int uninstall(void) {
   tc.hInstance = inst;
   tc.dwFlags = TDF_USE_COMMAND_LINKS | TDF_ALLOW_DIALOG_CANCELLATION;
   tc.dwCommonButtons = TDCBF_CANCEL_BUTTON;
-  tc.pszWindowTitle = L"卸载渲染站";
+  tc.pszWindowTitle = L"卸载 daumhost";
   tc.pszMainIcon = MAKEINTRESOURCEW(1);
-  tc.pszMainInstruction = L"要卸载渲染站吗？";
+  tc.pszMainInstruction = L"要卸载 daumhost 吗？";
   tc.pszContent = content;
   tc.pButtons = buttons;
   tc.cButtons = 2;
   int pressed = 0;
   if (FAILED(TaskDialogIndirect(&tc, &pressed, NULL, NULL)) || (pressed != 100 && pressed != 101)) return 0;
   while (stationRunning() && !stopStation())
-    if (MessageBoxW(NULL, L"无法关闭正在运行的渲染站。请从托盘菜单退出渲染站，然后单击「重试」。", L"卸载渲染站", MB_RETRYCANCEL | MB_ICONWARNING) != IDRETRY) return 1;
+    if (MessageBoxW(NULL, L"无法关闭正在运行的 daumhost。请从托盘菜单退出 daumhost，然后单击「重试」。", L"卸载 daumhost", MB_RETRYCANCEL | MB_ICONWARNING) != IDRETRY) return 1;
   HKEY k;
   if (RegOpenKeyExW(HKEY_CURRENT_USER, RUN_KEY, 0, KEY_SET_VALUE, &k) == ERROR_SUCCESS) {
     RegDeleteValueW(k, RUN_NAME);
@@ -1377,8 +1377,8 @@ static int uninstall(void) {
   STARTUPINFOW si = { sizeof si };
   PROCESS_INFORMATION pi;
   if (!CopyFileW(exePath, copy, FALSE) || !CreateProcessW(copy, cmd, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
-    FMT(content, L"渲染站已从系统中移除，但未能删除程序文件，请手动删除：\n%ls", exeDir);
-    MessageBoxW(NULL, content, L"卸载渲染站", MB_ICONWARNING);
+    FMT(content, L"daumhost 已从系统中移除，但未能删除程序文件，请手动删除：\n%ls", exeDir);
+    MessageBoxW(NULL, content, L"卸载 daumhost", MB_ICONWARNING);
     return 1;
   }
   CloseHandle(pi.hThread);
@@ -1409,10 +1409,10 @@ static int uninstallFinish(const wchar_t *dir, int keepData, DWORD after) {
     }
   }
   wchar_t msg[MAX_PATH * 2 + 128];
-  if (!ok) FMT(msg, L"渲染站已卸载，但部分文件未能删除，请手动删除：\n%ls", dir);
-  else if (keepData) FMT(msg, L"渲染站已卸载。设置和任务输出保留在：\n%ls\\.tools", dir);
-  else FMT(msg, L"渲染站已卸载。");
-  MessageBoxW(NULL, msg, L"卸载渲染站", ok ? MB_ICONINFORMATION : MB_ICONWARNING);
+  if (!ok) FMT(msg, L"daumhost 已卸载，但部分文件未能删除，请手动删除：\n%ls", dir);
+  else if (keepData) FMT(msg, L"daumhost 已卸载。设置和任务输出保留在：\n%ls\\.tools", dir);
+  else FMT(msg, L"daumhost 已卸载。");
+  MessageBoxW(NULL, msg, L"卸载 daumhost", ok ? MB_ICONINFORMATION : MB_ICONWARNING);
   // and this copy, once it has gone
   wchar_t comspec[MAX_PATH], cmd[MAX_PATH * 3];
   if (!GetEnvironmentVariableW(L"ComSpec", comspec, MAX_PATH)) lstrcpynW(comspec, L"cmd.exe", MAX_PATH);
@@ -1496,7 +1496,7 @@ static int startHere(int quiet, int asked, DWORD after, const wchar_t *from) {
   GetFullPathNameW(launcherDir, MAX_PATH, repo, NULL);
   FMT(check, L"%ls\\station.mjs", repo);
   if (!isFile(check)) {
-    MessageBoxW(NULL, L"渲染站.exe 必须与 station.mjs 位于同一文件夹（渲染站仓库的根目录）。\n\n桌面上的「渲染站」是它的快捷方式，以后可从快捷方式启动。", TITLE, MB_ICONERROR);
+    MessageBoxW(NULL, L"渲染站.exe 必须与 station.mjs 位于同一文件夹（daumhost 仓库的根目录）。\n\n桌面上的「daumhost」是它的快捷方式，以后可从快捷方式启动。", TITLE, MB_ICONERROR);
     return 1;
   }
   FMT(logPath, L"%ls\\.tools\\remote\\station.log", repo);
@@ -1509,7 +1509,7 @@ static int startHere(int quiet, int asked, DWORD after, const wchar_t *from) {
     DeleteFileW(mark);
   }
   if (!findNode()) {
-    MessageBoxW(NULL, L"未找到 Node.js。请先安装 Node.js（nodejs.org，LTS 版本），再启动渲染站。", TITLE, MB_ICONERROR);
+    MessageBoxW(NULL, L"未找到 Node.js。请先安装 Node.js（nodejs.org，LTS 版本），再启动 daumhost。", TITLE, MB_ICONERROR);
     return 1;
   }
   return -1;
@@ -1629,7 +1629,7 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE prev, PWSTR args, int how) {
   RegisterClassW(&wc);
   hwnd = CreateWindowExW(0, wc.lpszClassName, TITLE, WS_OVERLAPPED, 0, 0, 0, 0, NULL, NULL, inst, NULL);
   taskbarCreated = RegisterWindowMessageW(L"TaskbarCreated");
-  // as administrator, the words of those without its rights still taken: a second start's 打开渲染站,
+  // as administrator, the words of those without its rights still taken: a second start's 打开 daumhost,
   // the installer's 退出, Explorer's
   ChangeWindowMessageFilterEx(hwnd, WM_COMMAND, MSGFLT_ALLOW, NULL);
   ChangeWindowMessageFilterEx(hwnd, WM_TRAY, MSGFLT_ALLOW, NULL);
@@ -1639,7 +1639,7 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE prev, PWSTR args, int how) {
     // its window at once, on the station running here; an icon to open it again, and to end it
     iconNow = ICON_BUSY;
     nid.hIcon = icons[ICON_BUSY];
-    lstrcpynW(nid.szTip, L"渲染站 · 试运行", 128);
+    lstrcpynW(nid.szTip, L"daumhost · 试运行", 128);
     addIcon();
     openWindow();
   } else {

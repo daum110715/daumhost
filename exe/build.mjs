@@ -2,7 +2,7 @@
 // with a play mark, as the window's) into .ico files, and puts them in .tools/exe-build/ with the
 // sources, the resources and what it takes of the WebView2 SDK (NuGet's Microsoft.Web.WebView2,
 // unpacked in .tools/webview2/). Then compile.mjs compiles them: on the device, as the preset
-// render-station/exe of its render station (the workspace of the station's own folder, with MINGW
+// render-station/exe of its daumhost (the workspace of the station's own folder, with MINGW
 // set), when it is reached and set up so; else here, with the cross compilers. The exe goes to the
 // repository's root with the SDK's WebView2Loader.dll; commit both after changing station.c,
 // common.h, the resources or the icons. It also builds the installer's program (setup.c) into

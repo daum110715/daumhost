@@ -2,7 +2,7 @@
 
 English | [中文](cli.zh-CN.md)
 
-`render-station` is the command-line tool on the server. It submits jobs to the device and manages the device's workspaces. Its short name is `rs`. For the terms used here (server, device, workspace, preset) and for setting up the device, see the [README](../README.md).
+`daumhost` (also `rs` and `render-station`, the older names) is the command-line tool on the server. It submits jobs to the device and manages the device's workspaces. Its short name is `daumhost`. For the terms used here (server, device, workspace, preset) and for setting up the device, see the [README](../README.md).
 
 ## Installation
 
@@ -12,7 +12,7 @@ The server needs Node.js 18 or later and a checkout of this repository. Run this
 npm link
 ```
 
-This installs the commands `render-station` and `rs` into npm's global `bin` folder; that folder must be on `PATH`. The commands keep pointing at the checkout, so `git pull` updates them too. Without `npm link`, run `node /path/to/render-station/cli.mjs` instead; it behaves the same.
+This installs the commands `daumhost`, `render-station` and `daumhost` into npm's global `bin` folder; that folder must be on `PATH`. The commands keep pointing at the checkout, so `git pull` updates them too. Without `npm link`, run `node /path/to/render-station/cli.mjs` instead; it behaves the same.
 
 ## Commands
 
@@ -30,16 +30,16 @@ This installs the commands `render-station` and `rs` into npm's global `bin` fol
 ## Common rules
 
 - `--json`: print one JSON object, the result, to standard output, and nothing else. Every command takes it.
-- `-h` and `--help`: show the command's help. `rs help <command>` does the same.
+- `-h` and `--help`: show the command's help. `daumhost help <command>` does the same.
 - Option placement: for `run` and `shell`, options come before the preset or the command, because what follows is passed on as arguments or as the command. Other commands take options anywhere. `--` ends the options.
 - Progress messages, such as a job's place in the queue or a wait for approval, go to standard error and are left out with `--json`.
-- The device is reached through the tunnel on ports 7700–7709 of the server. The command tries them in turn and uses the first one where the station answers. Set `RENDER_STATION_PORT` to use only that port.
+- The device is reached through the tunnel on ports 7700–7709 of the server. The command tries them in turn and uses the first one where daumhost answers. Set `RENDER_STATION_PORT` to use only that port.
 - Paths on the device are full paths. Write them with forward slashes, as in `F:/projects/site`, or quote them when they use backslashes: `'F:\projects\site'`.
 
 ## status
 
 ```sh
-rs status [--json]
+daumhost status [--json]
 ```
 
 Shows whether the device is reached, how many jobs run and wait there and how many may run at once, whether it is paused, the Shell mode, whether the server may manage workspaces, and each workspace with its presets and the settings it still lacks.
@@ -50,9 +50,9 @@ Shows whether the device is reached, how many jobs run and wait there and how ma
 |---|---|
 | `online` | Whether the device was reached. |
 | `port` | The port it was reached on. |
-| `protocol`, `features` | The protocol version and the features the station supports (see "Compatibility"). |
+| `protocol`, `features` | The protocol version and the features daumhost supports (see "Compatibility"). |
 | `platform` | The device's operating system, such as `win32`. |
-| `accepting` | `false` while the station is paused. |
+| `accepting` | `false` while daumhost is paused. |
 | `limit` | How many jobs may run at once. |
 | `running` | The jobs running, each with `id`, `kind` and its preset or command. |
 | `queued` | How many jobs wait. |
@@ -63,7 +63,7 @@ Shows whether the device is reached, how many jobs run and wait there and how ma
 ## presets
 
 ```sh
-rs presets [<workspace>] [--json]
+daumhost presets [<workspace>] [--json]
 ```
 
 Lists the presets of every workspace, or of one workspace. For each preset it shows the description, the arguments it accepts (each argument must match one of the listed patterns in full), the files a job brings from the server, and the time limit.
@@ -73,7 +73,7 @@ Lists the presets of every workspace, or of one workspace. For each preset it sh
 ## run
 
 ```sh
-rs run [--src <dir>] [--out <dir>] [--json] <workspace>/<preset> [args…]
+daumhost run [--src <dir>] [--out <dir>] [--json] <workspace>/<preset> [args…]
 ```
 
 Runs a preset on the device and waits for it to end.
@@ -86,7 +86,7 @@ Runs a preset on the device and waits for it to end.
 
 ```sh
 cd ~/site
-rs run site/build 1080p
+daumhost run site/build 1080p
 ```
 
 `--json` prints:
@@ -105,7 +105,7 @@ rs run site/build 1080p
 ## shell
 
 ```sh
-rs shell [--workspace <name>] [--cwd <dir>] [--timeout <s>] [--json] <command…>
+daumhost shell [--workspace <name>] [--cwd <dir>] [--timeout <s>] [--json] <command…>
 ```
 
 Runs a command on the device and prints its whole output and its exit code. The device's owner must have enabled Shell; see "Shell permissions" in the README.
@@ -119,8 +119,8 @@ Runs a command on the device and prints its whole output and its exit code. The 
 - Commands are shown in the approval dialog and written to the device's log. Never put keys or passwords in them.
 
 ```sh
-rs sh --workspace site git status
-rs sh --workspace site --cwd assets --timeout 60 'Get-ChildItem -Recurse | Measure-Object'
+daumhost sh --workspace site git status
+daumhost sh --workspace site --cwd assets --timeout 60 'Get-ChildItem -Recurse | Measure-Object'
 ```
 
 `--json` prints the same fields as `run`, with `kind` set to `"shell"` and `command` in place of `preset` and `args`.
@@ -128,10 +128,10 @@ rs sh --workspace site --cwd assets --timeout 60 'Get-ChildItem -Recurse | Measu
 ## workspace
 
 ```sh
-rs workspace [list] [--json]
-rs workspace add <name> <path> [--create] [--env NAME=value …] [--json]
-rs workspace set <name> [--path <path> [--create]] [--env NAME=value …] [--unset NAME …] [--json]
-rs workspace remove <name> [--json]
+daumhost workspace [list] [--json]
+daumhost workspace add <name> <path> [--create] [--env NAME=value …] [--json]
+daumhost workspace set <name> [--path <path> [--create]] [--env NAME=value …] [--unset NAME …] [--json]
+daumhost workspace remove <name> [--json]
 ```
 
 Without an action, or with `list`, lists the workspaces as `status` does. The other actions change them:
@@ -145,10 +145,10 @@ Without an action, or with `list`, lists the workspaces as `status` does. The ot
 Whether a change needs approval depends on the device's setting 服务器管理工作区 (Server manages workspaces); see "Approvals".
 
 ```sh
-rs ws add site F:/projects/site
-rs ws add scratch F:/scratch --create
-rs ws set site --env FFMPEG=C:/ffmpeg/bin/ffmpeg.exe
-rs ws remove scratch
+daumhost ws add site F:/projects/site
+daumhost ws add scratch F:/scratch --create
+daumhost ws set site --env FFMPEG=C:/ffmpeg/bin/ffmpeg.exe
+daumhost ws remove scratch
 ```
 
 Settings are shown in the approval dialog and written to the device's log. Never pass keys or passwords with `--env`.
@@ -158,7 +158,7 @@ Settings are shown in the approval dialog and written to the device's log. Never
 ## ls
 
 ```sh
-rs ls [<path>] [--json]
+daumhost ls [<path>] [--json]
 ```
 
 Lists a folder on the device: the name, size and time of last change of each file and folder in it. File contents are never read. Without a path, it lists the device's drives.
@@ -167,9 +167,9 @@ Lists a folder on the device: the name, size and time of last change of each fil
 - Folders inside a registered workspace are listed without approval. Other folders depend on 服务器管理工作区; see "Approvals".
 
 ```sh
-rs ls
-rs ls F:/
-rs ls 'F:\projects'
+daumhost ls
+daumhost ls F:/
+daumhost ls 'F:\projects'
 ```
 
 `--json` prints `ok`, `path` (the folder in full; `null` for the drive list), `entries` (each with `name`, `type` (`"folder"` or `"file"`), `size` in bytes (`null` for folders) and `modified` in milliseconds since 1970) and `more` (how many entries were left out).
@@ -177,41 +177,41 @@ rs ls 'F:\projects'
 ## clip
 
 ```sh
-rs clip [--json]
-rs clip ls [--json]
-rs clip set [<text…>] [--file <path>] [--json]
+daumhost clip [--json]
+daumhost clip ls [--json]
+daumhost clip set [<text…>] [--file <path>] [--json]
 ```
 
-While the device has 同步剪贴板 (Sync clipboard) on, text and pictures copied there are written to `~/.render-station/clipboard/` on the server by themselves; see "Clipboard sync" in the README. `rs clip` and `xclip` look in that account's home and in `$HOME`, when it differs, and read what came last.
+While the device has 同步剪贴板 (Sync clipboard) on, text and pictures copied there are written to `~/.render-station/clipboard/` on the server by themselves; see "Clipboard sync" in the README. `daumhost clip` and `xclip` look in that account's home and in `$HOME`, when it differs, and read what came last.
 
-- `rs clip`: prints the newest. Text as it is; for a picture, the path of its PNG.
-- `rs clip ls`: lists the last 50, newest first, with the time, type, size, path and the start of the text.
+- `daumhost clip`: prints the newest. Text as it is; for a picture, the path of its PNG.
+- `daumhost clip ls`: lists the last 50, newest first, with the time, type, size, path and the start of the text.
 - These two read the files on the server and do not need the device.
-- `rs clip set`: puts something on the device's clipboard: the text after the command, the file `--file` names, or standard input. A PNG, JPEG, GIF, BMP or TIFF goes there as a picture, anything else as UTF-8 text; up to 20 MB. Text that starts with `--` goes after `--`. What is put there is not sent back.
+- `daumhost clip set`: puts something on the device's clipboard: the text after the command, the file `--file` names, or standard input. A PNG, JPEG, GIF, BMP or TIFF goes there as a picture, anything else as UTF-8 text; up to 20 MB. Text that starts with `--` goes after `--`. What is put there is not sent back.
 
 ```sh
-rs clip
-rs clip ls
-git diff | rs clip set
-rs clip set --file shot.png
+daumhost clip
+daumhost clip ls
+git diff | daumhost clip set
+daumhost clip set --file shot.png
 ```
 
 ### As xclip
 
-Programs on the server read and write the clipboard with `xclip` (Claude Code, for one, when pasting a picture). Link `rs` as `xclip` in a folder early on the PATH:
+Programs on the server read and write the clipboard with `xclip` (Claude Code, for one, when pasting a picture). Link `daumhost` as `xclip` in a folder early on the PATH:
 
 ```sh
-ln -s "$(command -v rs)" ~/.local/bin/xclip
+ln -s "$(command -v daumhost)" ~/.local/bin/xclip
 ```
 
-Then what they read is what was last copied on the device (as `rs clip` gives it), and what they write goes onto the device's clipboard as with `rs clip set`. So a picture copied on the device is pasted into Claude Code on the server. Claude Code on Linux pastes a picture with Ctrl+V, which a Windows terminal keeps for pasting text; bind Alt+V to it as well in `~/.claude/keybindings.json` on the server: `{"bindings": [{"context": "Chat", "bindings": {"alt+v": "chat:imagePaste"}}]}`. It takes xclip's `-selection`, `-target` (`TARGETS` too), `-out`, `-in`, `-filter` and `-rmlastnl`, and their abbreviations. Do not do this on a machine with a desktop of its own: it would hide the real xclip.
+Then what they read is what was last copied on the device (as `daumhost clip` gives it), and what they write goes onto the device's clipboard as with `daumhost clip set`. So a picture copied on the device is pasted into Claude Code on the server. Claude Code on Linux pastes a picture with Ctrl+V, which a Windows terminal keeps for pasting text; bind Alt+V to it as well in `~/.claude/keybindings.json` on the server: `{"bindings": [{"context": "Chat", "bindings": {"alt+v": "chat:imagePaste"}}]}`. It takes xclip's `-selection`, `-target` (`TARGETS` too), `-out`, `-in`, `-filter` and `-rmlastnl`, and their abbreviations. Do not do this on a machine with a desktop of its own: it would hide the real xclip.
 
-With `--json`, `rs clip` prints `ok`, `path`, `type` (`"text"` or `"image"`), `size` in bytes and `at` in milliseconds since 1970, and `text` for text; `rs clip ls` prints `ok` and `entries`, each with the same fields but `text`; `rs clip set` prints `ok`, `type` and `size`.
+With `--json`, `daumhost clip` prints `ok`, `path`, `type` (`"text"` or `"image"`), `size` in bytes and `at` in milliseconds since 1970, and `text` for text; `daumhost clip ls` prints `ok` and `entries`, each with the same fields but `text`; `daumhost clip set` prints `ok`, `type` and `size`.
 
 ## help
 
 ```sh
-rs help [<command>]
+daumhost help [<command>]
 ```
 
 Shows the list of commands, or what one command does, its options and examples.
@@ -227,7 +227,7 @@ The device's setting 服务器管理工作区 (Server manages workspaces) decide
 | 无需审批 (Allow) | Made at once. | Listed at once. |
 
 - A request waiting for approval appears as a dialog in the device's window, and the tray icon shows a notification that opens the window when clicked. The command reports `waiting for the owner's approval on the device` and waits up to 5 minutes. A denial, a timeout or an interrupted command means the request has no effect.
-- When the owner approves listing a folder, that folder and everything under it can be listed again for 10 minutes without another approval. Approving the drive list covers the drive list only. Changing the setting, pausing the station or reconnecting closes these windows.
+- When the owner approves listing a folder, that folder and everything under it can be listed again for 10 minutes without another approval. Approving the drive list covers the drive list only. Changing the setting, pausing daumhost or reconnecting closes these windows.
 - Requests and the folders listed outside workspaces appear on the device's Activity page and in its log.
 
 ## Exit status
@@ -238,34 +238,34 @@ The device's setting 服务器管理工作区 (Server manages workspaces) decide
 | The job's own | A job ran and failed. |
 | 1 | The request failed without running: an argument the preset does not accept, a denied or expired approval, a refused workspace change, a folder that cannot be listed, a station too old for the command. |
 | 2 | The command was used incorrectly. |
-| 3 | The device was not reached, the station is paused, or too many jobs already wait. |
+| 3 | The device was not reached, daumhost is paused, or too many jobs already wait. |
 
 A job's own exit status can coincide with 1, 2 or 3. When the difference matters, use `exitCode` in the `--json` output.
 
 ## Compatibility
 
-The command and the station on the device must speak the same protocol version; otherwise every command reports `protocol mismatch`. Within a version, the station lists its features in `status --json`. A command that needs a feature the device lacks, such as `ls` or `--create`, reports that the station is too old; it updates itself, or the owner can click 立即检查 (Check now) in its Settings → Updates and about page.
+The command and daumhost on the device must speak the same protocol version; otherwise every command reports `protocol mismatch`. Within a version, daumhost lists its features in `status --json`. A command that needs a feature the device lacks, such as `ls` or `--create`, reports that daumhost is too old; it updates itself, or the owner can click 立即检查 (Check now) in its Settings → Updates and about page.
 
 ## Typical tasks
 
 Register a project folder on the device and see what it offers:
 
 ```sh
-rs ls                     # the drives
-rs ls F:/                 # needs one approval; folders under F:/ are then open for 10 minutes
-rs ls F:/projects
-rs ws add site F:/projects/site
-rs presets site
+daumhost ls                     # the drives
+daumhost ls F:/                 # needs one approval; folders under F:/ are then open for 10 minutes
+daumhost ls F:/projects
+daumhost ws add site F:/projects/site
+daumhost presets site
 ```
 
 Run a preset from a script and read its result:
 
 ```sh
-rs run --json --src ~/site site/build 1080p > result.json
+daumhost run --json --src ~/site site/build 1080p > result.json
 ```
 
 Check that the device is ready before submitting:
 
 ```sh
-rs status --json | jq '.online and .accepting'
+daumhost status --json | jq '.online and .accepting'
 ```

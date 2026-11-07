@@ -24,7 +24,7 @@
 #include "common.h"
 
 #define FMT(buf, ...) (_snwprintf(buf, sizeof buf / sizeof *buf - 1, __VA_ARGS__), buf[sizeof buf / sizeof *buf - 1] = 0)
-#define TITLE L"渲染站安装程序"
+#define TITLE L"daumhost 安装程序"
 // the end of this file: the version (32 bytes, UTF-8, NUL-padded), the tar's size (8, little-endian), the mark
 #define MARK "RSSETUP1"
 #define TAIL 48
@@ -117,7 +117,7 @@ static int unpack(void) {
   GetExitCodeProcess(pi.hProcess, &code);
   CloseHandle(pi.hThread);
   CloseHandle(pi.hProcess);
-  if (code) fail(L"解压安装数据失败（tar.exe 返回 %lu）。请确认渲染站已退出，然后重新运行安装程序。", code);
+  if (code) fail(L"解压安装数据失败（tar.exe 返回 %lu）。请确认 daumhost 已退出，然后重新运行安装程序。", code);
   return !code;
 }
 
@@ -163,7 +163,7 @@ static void registerApp(void) {
   FMT(icon, L"%ls\\渲染站.exe,0", dir);
   FMT(remove, L"\"%ls\\渲染站.exe\" --uninstall", dir);
   FMT(date, L"%04u%02u%02u", t.wYear, t.wMonth, t.wDay);
-  setString(k, L"DisplayName", L"渲染站");
+  setString(k, L"DisplayName", L"daumhost");
   setString(k, L"DisplayVersion", version);
   setString(k, L"Publisher", L"daum110715");
   setString(k, L"DisplayIcon", icon);
@@ -237,8 +237,8 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE prev, PWSTR args, int how) {
   FMT(check, L"%ls\\release.json", dir);
   int updating = isFile(check);
   int running = stationRunning();
-  FMT(heading, updating ? L"将渲染站更新到 %ls" : L"安装渲染站 %ls", version);
-  FMT(content, L"安装位置：%ls\n\n渲染站按当前用户安装，无需管理员权限。安装完成后将自动启动。%ls", dir, running ? L"\n\n正在运行的渲染站将被关闭。" : L"");
+  FMT(heading, updating ? L"将 daumhost 更新到 %ls" : L"安装 daumhost %ls", version);
+  FMT(content, L"安装位置：%ls\n\ndaumhost 按当前用户安装，无需管理员权限。安装完成后将自动启动。%ls", dir, running ? L"\n\n正在运行的 daumhost 将被关闭。" : L"");
   TASKDIALOG_BUTTON go[] = { { IDOK, updating ? L"更新" : L"安装" } };
   TASKDIALOGCONFIG ask = { sizeof ask };
   ask.hInstance = inst;
@@ -255,14 +255,14 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE prev, PWSTR args, int how) {
 
   // ——— the station that runs, quit; then the work, shown going ———
   while (stationRunning() && !stopStation())
-    if (MessageBoxW(NULL, L"无法关闭正在运行的渲染站。请从托盘菜单退出渲染站，然后单击「重试」。", TITLE, MB_RETRYCANCEL | MB_ICONWARNING) != IDRETRY) return 1;
+    if (MessageBoxW(NULL, L"无法关闭正在运行的 daumhost。请从托盘菜单退出 daumhost，然后单击「重试」。", TITLE, MB_RETRYCANCEL | MB_ICONWARNING) != IDRETRY) return 1;
   TASKDIALOGCONFIG doing = { sizeof doing };
   doing.hInstance = inst;
   doing.dwFlags = TDF_SHOW_MARQUEE_PROGRESS_BAR | TDF_CALLBACK_TIMER;
   doing.dwCommonButtons = TDCBF_CLOSE_BUTTON;
   doing.pszWindowTitle = TITLE;
   doing.pszMainIcon = MAKEINTRESOURCEW(1);
-  doing.pszMainInstruction = updating ? L"正在更新渲染站…" : L"正在安装渲染站…";
+  doing.pszMainInstruction = updating ? L"正在更新 daumhost…" : L"正在安装 daumhost…";
   doing.pszContent = L"正在解压程序文件，请稍候。";
   doing.pfCallback = progress;
   TaskDialogIndirect(&doing, NULL, NULL, NULL);
@@ -275,7 +275,7 @@ int WINAPI wWinMain(HINSTANCE hi, HINSTANCE prev, PWSTR args, int how) {
   wchar_t station[MAX_PATH + 32];
   FMT(station, L"%ls\\渲染站.exe", dir);
   if ((INT_PTR)ShellExecuteW(NULL, L"open", station, NULL, dir, SW_SHOWNORMAL) <= 32) {
-    FMT(content, L"渲染站 %ls 已安装，但未能自动启动。请从开始菜单或以下位置启动：\n%ls", version, station);
+    FMT(content, L"daumhost %ls 已安装，但未能自动启动。请从开始菜单或以下位置启动：\n%ls", version, station);
     MessageBoxW(NULL, content, TITLE, MB_ICONWARNING);
   }
   return 0;

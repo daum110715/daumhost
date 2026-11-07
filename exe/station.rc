@@ -21,8 +21,8 @@ BEGIN
   BEGIN
     BLOCK "080404b0"
     BEGIN
-      VALUE "FileDescription", "渲染站"
-      VALUE "ProductName", "渲染站"
+      VALUE "FileDescription", "daumhost"
+      VALUE "ProductName", "daumhost"
       VALUE "FileVersion", "1.0"
       VALUE "OriginalFilename", "渲染站.exe"
     END

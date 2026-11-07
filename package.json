@@ -1,10 +1,11 @@
 {
   "name": "render-station",
-  "version": "0.7.18",
+  "version": "0.7.19",
   "private": true,
   "license": "MIT",
   "description": "Lets agents on a server hand heavy jobs to a Windows machine over a reverse SSH tunnel",
   "bin": {
+    "daumhost": "cli.mjs",
     "render-station": "cli.mjs",
     "rs": "cli.mjs"
   },

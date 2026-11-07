@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // On the server: hands jobs to the worker on the machine that does the heavy work (worker.mjs, kept
-// up there by the render station, with the reverse SSH tunnel it opens to here; it comes in on a
+// up there by daumhost, with the reverse SSH tunnel it opens to here; it comes in on a
 // port from 7700 to 7709, or the one RENDER_STATION_PORT names). Installed as `render-station` and
-// `rs` (npm link); `rs help` says what each command does, docs/cli.md says it at length.
+// `daumhost` (npm link); `daumhost help` says what each command does, docs/cli.md says it at length.
 // --json: one JSON object on stdout, the end of it all ({ ok, …, error }).
 // Exit status: the job's own when it ran; 1 when it failed without running, or a request was
 // refused; 2 for a usage error; 3 when no worker is reached, or it is paused or its queue full.
@@ -17,7 +17,7 @@ import { gather, safeRel } from './workspace.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-// ——— the commands, and what `rs help` says of them ———
+// ——— the commands, and what `daumhost help` says of them ———
 const ALIAS = { st: 'status', sh: 'shell', ws: 'workspace' };
 /** each command's options that take a value (`many`: given more than once), those that do not, and
  *  whether its options may come after its words (else they end where the words start: what follows
@@ -33,10 +33,10 @@ const COMMANDS = {
   help: { takes: [], anywhere: true },
 };
 const HELP = {
-  '': `render-station (also: rs) hands heavy jobs from this server to the render station on another
-machine, and looks after the workspaces there.
+  '': `daumhost (also: rs, render-station) hands heavy jobs from this server to another machine, and looks after the
+workspaces there.
 
-usage: rs <command> [options]
+usage: daumhost <command> [options]
 
 commands:
   status, st       whether the device is reached, what runs there, and its workspaces
@@ -46,7 +46,7 @@ commands:
   workspace, ws    list the workspaces, or add, change or remove one
   ls               list a folder on the device, or its drives
   clip             what was copied on the device, or put something on its clipboard
-  help             this, or what one command does: rs help <command>
+  help             this, or what one command does: daumhost help <command>
 
 Every command takes --json: then it prints one JSON object, its result, and nothing else.
 Exit status: 0 when done; when a job ran and failed, the job's own; 1 when it failed without
@@ -54,18 +54,18 @@ running, or a request was refused; 2 for a usage error; 3 when the device is not
 or has too many jobs waiting.
 The device is reached through the tunnel on ports 7700-7709 here, or the port RENDER_STATION_PORT
 names. The manual: docs/cli.md in the render-station repository.`,
-  status: `usage: rs status [--json]
+  status: `usage: daumhost status [--json]
 
-Whether the render station on the device is reached; how many jobs run and wait there and how many
+Whether daumhost on the device is reached; how many jobs run and wait there and how many
 may run at once; whether it takes Shell commands and requests to manage workspaces; and each
 workspace, with its presets and the settings it still lacks.`,
-  presets: `usage: rs presets [<workspace>] [--json]
+  presets: `usage: daumhost presets [<workspace>] [--json]
 
 The presets of every workspace, or of one: what each does, the arguments it takes (each argument
 must match one of the patterns listed), the files a job brings from here, and its time limit.
 
-example: rs presets site`,
-  run: `usage: rs run [--src <dir>] [--out <dir>] [--json] <workspace>/<preset> [args…]
+example: daumhost presets site`,
+  run: `usage: daumhost run [--src <dir>] [--out <dir>] [--json] <workspace>/<preset> [args…]
 
 Runs a preset of a workspace on the device and waits for it to end. Everything after
 <workspace>/<preset> is passed to the preset as its arguments; options come before it.
@@ -77,8 +77,8 @@ Runs a preset of a workspace on the device and waits for it to end. Everything a
 When the device is busy, the job waits its turn and the command says how many jobs are ahead.
 Interrupting the command cancels the job, waiting or running.
 
-example: rs run --src ~/site site/build 1080p`,
-  shell: `usage: rs shell [--workspace <name>] [--cwd <dir>] [--timeout <s>] [--json] <command…>
+example: daumhost run --src ~/site site/build 1080p`,
+  shell: `usage: daumhost shell [--workspace <name>] [--cwd <dir>] [--timeout <s>] [--json] <command…>
 
 Runs a command on the device (in PowerShell on Windows) and prints its output and exit code. The
 owner must have turned Shell on there; a command not on their allowlist waits up to 5 minutes for
@@ -88,14 +88,14 @@ their approval. Options come before the command.
   --cwd <dir>         a folder in the workspace to run in, relative to its root
   --timeout <s>       the time limit, in seconds
 
-example: rs sh --workspace site git status`,
-  workspace: `usage: rs workspace [list] [--json]
-       rs workspace add <name> <path> [--create] [--env NAME=value …] [--json]
-       rs workspace set <name> [--path <path> [--create]] [--env NAME=value …] [--unset NAME …] [--json]
-       rs workspace remove <name> [--json]
+example: daumhost sh --workspace site git status`,
+  workspace: `usage: daumhost workspace [list] [--json]
+       daumhost workspace add <name> <path> [--create] [--env NAME=value …] [--json]
+       daumhost workspace set <name> [--path <path> [--create]] [--env NAME=value …] [--unset NAME …] [--json]
+       daumhost workspace remove <name> [--json]
 
 Lists the workspaces registered on the device, or changes them as far as the owner lets the server
-(the render station's setting 服务器管理工作区): a change waits up to 5 minutes for their approval
+(daumhost's setting 服务器管理工作区): a change waits up to 5 minutes for their approval
 on the device, or is made at once, as they chose.
 
   <path>           a full path on the device: F:/projects/site, or quoted, 'F:\\projects\\site'
@@ -104,13 +104,13 @@ on the device, or is made at once, as they chose.
                    than once for more than one
   --unset NAME     clear a setting
 
-When a workspace is added, settings an old render station kept in that folder
+When a workspace is added, settings an old daumhost kept in that folder
 (.tools/remote/config.json) are taken over.
 
-examples: rs ws
-          rs ws add site F:/projects/site
-          rs ws set site --env FFMPEG=C:/ffmpeg/bin/ffmpeg.exe`,
-  ls: `usage: rs ls [<path>] [--json]
+examples: daumhost ws
+          daumhost ws add site F:/projects/site
+          daumhost ws set site --env FFMPEG=C:/ffmpeg/bin/ffmpeg.exe`,
+  ls: `usage: daumhost ls [<path>] [--json]
 
 Lists a folder on the device: the name, size and last change of each file and folder in it, but
 nothing of what the files hold. Without a path, the drives.
@@ -119,38 +119,38 @@ Folders in a registered workspace are listed at once. Others are listed as the o
 server: when each request needs their approval, a folder approved stays open, with everything under
 it, for 10 minutes.
 
-examples: rs ls
-          rs ls F:/`,
-  clip: `usage: rs clip [--json]
-       rs clip ls [--json]
-       rs clip set [<text…>] [--file <path>] [--json]
+examples: daumhost ls
+          daumhost ls F:/`,
+  clip: `usage: daumhost clip [--json]
+       daumhost clip ls [--json]
+       daumhost clip set [<text…>] [--file <path>] [--json]
 
-The device's clipboard, while its owner has 同步剪贴板 (clipboard sync) on in the render station's
+The device's clipboard, while its owner has 同步剪贴板 (clipboard sync) on in daumhost's
 settings there. What is copied on the device comes here by itself, within a second or so (or once
-the device connects again), into ~/.render-station/clipboard/. rs clip prints the newest, or for a
-picture the path of its PNG; rs clip ls lists the last 50. Both read what is here and do not need
+the device connects again), into ~/.render-station/clipboard/. daumhost clip prints the newest, or for a
+picture the path of its PNG; daumhost clip ls lists the last 50. Both read what is here and do not need
 the device.
 
-rs clip set puts something on the device's clipboard: the text given, what is piped in, or a file.
+daumhost clip set puts something on the device's clipboard: the text given, what is piped in, or a file.
 A PNG, JPEG, GIF, BMP or TIFF goes there as a picture, anything else as text (UTF-8); up to 20 MB.
 Text that starts with -- goes after --.
 
-Linked as xclip, ahead of any other on the PATH (ln -s "$(command -v rs)" ~/.local/bin/xclip), rs
+Linked as xclip, ahead of any other on the PATH (ln -s "$(command -v daumhost)" ~/.local/bin/xclip), it
 is the clipboard of this server to the programs that use xclip: what they read is what came from the
 device, what they write goes there. So a picture copied on the device is pasted into Claude Code
 here. Not on a machine with a desktop of its own, whose xclip it would hide.
 
-examples: rs clip
-          git diff | rs clip set
-          rs clip set --file shot.png`,
-  help: `usage: rs help [<command>]
+examples: daumhost clip
+          git diff | daumhost clip set
+          daumhost clip set --file shot.png`,
+  help: `usage: daumhost help [<command>]
 
 What the commands do, or what one does.`,
 };
 
 // ——— by the name xclip (a link to this): the clipboard of this server, as programs here ask it with
 // xclip (Claude Code, for a picture to paste), is the device's. Read, it is what came from there
-// (in ~/.render-station/clipboard/); written, it goes there as rs clip set puts it ———
+// (in ~/.render-station/clipboard/); written, it goes there as daumhost clip set puts it ———
 // The device pushes over ssh, which lands in the account's own home, the one the password file names;
 // a program here can run with another HOME (a login that set it, an account whose home was moved). So
 // the clipboard is looked for in both, and what came last wins.
@@ -160,7 +160,7 @@ const CLIP_DIR = CLIP_DIRS[0];
 /** the newest file of this name in any of the clipboard folders, or null */
 const clipFind = (name) => CLIP_DIRS.map((d) => join(d, name)).filter((f) => existsSync(f)).sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0] ?? null;
 const XCLIP = ['out', 'in', 'target', 'selection', 'display', 'loops', 'filter', 'rmlastnl', 'quiet', 'silent', 'verbose', 'noutf8', 'sensitive', 'version', 'help'];
-/** what was written to xclip, for rs clip set */
+/** what was written to xclip, for daumhost clip set */
 let xclipData = null;
 if (basename(process.argv[1] ?? '') === 'xclip') {
   const x = { files: [] };
@@ -174,7 +174,7 @@ if (basename(process.argv[1] ?? '') === 'xclip') {
     else x[name] = true;
   }
   if (x.version || x.help) {
-    console.log('xclip of render-station: the device\'s clipboard (rs help clip)');
+    console.log('xclip of daumhost: the device\'s clipboard (daumhost help clip)');
     process.exit(0);
   }
   if (x.out) {
@@ -247,7 +247,7 @@ function finish(result, status) {
 function usage(why) {
   // the command's usage lines, or the list of commands
   const brief = COMMANDS[what] ? HELP[what].split('\n\n')[0] : HELP[''].split('\n\n').slice(1, 3).join('\n\n');
-  const text = `${why}\n\n${brief}\n\n(rs help${COMMANDS[what] ? ` ${what}` : ''}: more)`;
+  const text = `${why}\n\n${brief}\n\n(daumhost help${COMMANDS[what] ? ` ${what}` : ''}: more)`;
   if (process.argv.includes('--json')) finish({ ok: false, error: text }, 2);
   console.error(text);
   process.exit(2);
@@ -333,7 +333,7 @@ if (what === 'clip' && words[0] !== 'set') {
   if (opts.file) usage('clip: --file is for set');
   if (words.length > 1 || (words.length && words[0] !== 'ls')) usage('clip: nothing, ls or set');
   const latest = ['latest.txt', 'latest.png'].map(clipFind).filter(Boolean).map(clipFile).sort((a, b) => b.at - a.at)[0];
-  const none = `nothing copied on the device has come here yet (${CLIP_DIRS.join(' or ')}); it comes while 同步剪贴板 (clipboard sync) is on in the render station's settings there`;
+  const none = `nothing copied on the device has come here yet (${CLIP_DIRS.join(' or ')}); it comes while 同步剪贴板 (clipboard sync) is on in daumhost's settings there`;
   if (words[0] === 'ls') {
     const list = CLIP_DIRS.map((d) => join(d, 'history')).filter((h) => existsSync(h)).flatMap((h) => readdirSync(h).filter((f) => /\.(txt|png)$/.test(f)).map((f) => clipFile(join(h, f)))).sort((a, b) => b.at - a.at);
     if (opts.json) finish({ ok: true, entries: list }, 0);
@@ -374,7 +374,7 @@ for (const p of process.env.RENDER_STATION_PORT ? [Number(process.env.RENDER_STA
     break;
   }
 }
-const OFFLINE = 'no worker reachable: the render station on the device is not running, is paused, or has not connected yet';
+const OFFLINE = 'no worker reachable: daumhost on the device is not running, is paused, or has not connected yet';
 const MISMATCH = () => `protocol mismatch: the worker uses version ${hello.protocol}, this command version ${PROTOCOL}; update the one that is older`;
 const MANAGE = { off: 'not allowed', ask: 'each needs the owner\'s approval', allow: 'allowed' };
 if (what === 'status') {
@@ -390,7 +390,7 @@ if (what === 'status') {
 if (hello && hello.protocol !== PROTOCOL) finish({ ok: false, error: MISMATCH() }, 1);
 if (!hello) finish({ ok: false, error: OFFLINE }, 3);
 /** refused, if the station on the device is older than what is asked of it */
-const need = (feature, what) => (hello.features ?? []).includes(feature) || finish({ ok: false, error: `the render station on the device is too old for ${what}: it updates itself, or check for updates in its settings` }, 1);
+const need = (feature, what) => (hello.features ?? []).includes(feature) || finish({ ok: false, error: `daumhost on the device is too old for ${what}: it updates itself, or check for updates in its settings` }, 1);
 
 function printWorkspaces() {
   for (const w of hello.workspaces) {
@@ -425,10 +425,10 @@ if (what === 'workspace' && (!words.length || words[0] === 'list')) {
 
 /** a request about the workspaces or the device's folders: its reply, once the owner allows it */
 async function manage(path, body, about) {
-  if (hello.manage === 'off') finish({ ok: false, error: 'the owner of the device does not let the server manage workspaces or look through folders (the render station\'s settings there)' }, 1);
+  if (hello.manage === 'off') finish({ ok: false, error: 'the owner of the device does not let the server manage workspaces or look through folders (daumhost\'s settings there)' }, 1);
   const step = (e) => e.event === 'pending' && tell('waiting for the owner\'s approval on the device (up to 5 minutes)');
   const res = await stream(port, path, Buffer.from(JSON.stringify(body)), {}, step).catch((e) => finish({ ok: false, ...about, error: `lost the connection to the worker: ${e.message}` }, 3));
-  if (res.status === 503) finish({ ok: false, ...about, error: 'the render station is paused' }, 3);
+  if (res.status === 503) finish({ ok: false, ...about, error: 'daumhost is paused' }, 3);
   if (res.status !== 200) finish({ ok: false, ...about, error: `the worker answered ${res.status}: ${res.body.toString().slice(0, 500)}` }, 1);
   return res.reply;
 }
@@ -477,7 +477,7 @@ if (what === 'workspace') {
   const w = reply.workspace;
   console.log(`${{ add: 'added', set: 'changed', remove: 'removed' }[action]} workspace ${name}${w ? ` (${w.path})` : ''}`);
   if (reply.created) console.log(`made the folder ${reply.created}`);
-  if (reply.imported?.length) console.log(`taken from the settings of the render station from before workspaces: ${reply.imported.join(', ')}`);
+  if (reply.imported?.length) console.log(`taken from the settings of daumhost from before workspaces: ${reply.imported.join(', ')}`);
   if (w?.error) console.log(`error: ${w.error}`);
   if (w?.missing.length) console.log(`not set up yet: ${w.missing.join(', ')}`);
   if (w) console.log(w.presets.length ? `presets: ${w.presets.map((p) => `${w.name}/${p}`).join(', ')}` : 'no presets');
@@ -498,7 +498,7 @@ if (what === 'clip') {
   if (opts.file && given.length) usage('clip set: the text or --file, not both');
   if (!xclipData && !opts.file && !given.length && process.stdin.isTTY) usage('clip set: the text, --file <path>, or something piped in');
   need('clip', 'clip set');
-  if (!hello.clipboard) finish({ ok: false, error: 'the owner of the device has not turned on 同步剪贴板 (clipboard sync) in the render station\'s settings there' }, 1);
+  if (!hello.clipboard) finish({ ok: false, error: 'the owner of the device has not turned on 同步剪贴板 (clipboard sync) in daumhost\'s settings there' }, 1);
   let data;
   try {
     data = xclipData ?? (opts.file ? readFileSync(resolve(opts.file)) : given.length ? Buffer.from(given.join(' '), 'utf8') : readFileSync(0));
@@ -510,7 +510,7 @@ if (what === 'clip') {
   const type = isPicture(data) ? 'image' : 'text';
   const body = JSON.stringify(type === 'image' ? { type, data: data.toString('base64') } : { type, text: data.toString('utf8') });
   const res = await call(port, 'POST', '/clip', Buffer.from(body)).catch((e) => finish({ ok: false, error: `lost the connection to the worker: ${e.message}` }, 3));
-  if (res.status === 503) finish({ ok: false, error: 'the render station is paused' }, 3);
+  if (res.status === 503) finish({ ok: false, error: 'daumhost is paused' }, 3);
   if (res.status !== 200) finish({ ok: false, error: `the worker answered ${res.status}: ${res.body.toString().slice(0, 500)}` }, 1);
   const reply = JSON.parse(res.body);
   if (opts.json || !reply.ok) finish(reply, reply.ok ? 0 : 1);
@@ -562,7 +562,7 @@ const step = (e) => {
 };
 const res = await stream(port, '/job', gzipSync(JSON.stringify(payload)), { 'content-encoding': 'gzip' }, step).catch((e) => finish({ ok: false, exitCode: null, ...meta, error: `lost the connection to the worker: ${e.message}` }, 3));
 if (res.status === 429) finish({ ok: false, exitCode: null, ...meta, error: 'too many jobs are already waiting on the device; try again later' }, 3);
-if (res.status === 503) finish({ ok: false, exitCode: null, ...meta, error: 'the render station is paused' }, 3);
+if (res.status === 503) finish({ ok: false, exitCode: null, ...meta, error: 'daumhost is paused' }, 3);
 if (res.status !== 200) finish({ ok: false, exitCode: null, ...meta, error: `the worker answered ${res.status}: ${res.body.toString().slice(0, 500)}` }, 1);
 const { reply } = res;
 
