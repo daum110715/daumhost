@@ -194,6 +194,8 @@ Lines of the form `progress 12/300` in a job's output are read as progress: show
 
 After the device wakes from sleep, loses the network, or the worker exits, daumhost reopens the tunnel and restarts the worker on its own. The log is `.tools/remote/daumhost.log`; open it from the tray menu's 查看日志 (View log) or from Settings → Updates and about.
 
+While daumhost takes jobs, and while a job still runs, the device does not go to sleep on its own, so the server still reaches it with the screen off. The screen still goes off as Windows is set to; closing the lid, the power button and Sleep in the Start menu still put it to sleep. Paused with no job running, it sleeps on its own again. `powercfg /requests` lists the request under SYSTEM, as `powershell.exe`.
+
 While the tunnel is open, anyone who can log in to the server can run the device's presets. Pause daumhost (in the window or the tray menu) when it is not needed; pausing closes the tunnel.
 
 ## Command line

@@ -594,6 +594,8 @@ function startWorker() {
         restock();
         note('job', e.ok ? `任务 #${e.id} 已完成：${what}，耗时 ${took(e.ms)}${e.files.length ? `，${e.files.length} 个文件已返回服务器` : ''}` : `任务 #${e.id} 失败：${what}，耗时 ${took(e.ms)}`);
         idle();
+        // the last job of a paused daumhost: the machine may sleep again
+        keepAwake();
       }
       push();
     },
@@ -729,6 +731,47 @@ setInterval(() => {
   }
   tick = now;
 }, 5000);
+
+// ——— awake: while daumhost takes jobs, or one still runs, this machine does not go to sleep on its
+// own, so the server still reaches it with the screen off. The screen still goes off as Windows is
+// set to; the lid, the power button and Sleep in the Start menu still put it to sleep. A hidden
+// PowerShell holds the request (SetThreadExecutionState, system required) and lets go when daumhost
+// pauses, or when it is gone however it went ———
+let awake = null;
+function keepAwake() {
+  const want = win && !quitting && (!config.paused || running.size > 0);
+  if (want === !!awake) return;
+  if (!want) {
+    const p = awake;
+    awake = null;
+    p.kill();
+    return note('daumhost', '本机可以照常自动睡眠');
+  }
+  const script = [
+    "$k = Add-Type -Name Power -Namespace Daumhost -PassThru -MemberDefinition '[DllImport(\"kernel32.dll\")] public static extern uint SetThreadExecutionState(uint flags);'",
+    // ES_CONTINUOUS | ES_SYSTEM_REQUIRED: held while this thread lives; the display is left alone
+    '[void]$k::SetThreadExecutionState(0x80000001)',
+    `while (Get-Process -Id ${process.pid} -ErrorAction SilentlyContinue) { Start-Sleep -Seconds 5 }`,
+  ].join('; ');
+  let p;
+  try {
+    p = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', script], { stdio: 'ignore', windowsHide: true });
+  } catch (e) {
+    log(`无法阻止本机自动睡眠：${e.message}`);
+    return;
+  }
+  awake = p;
+  note('daumhost', '接收任务期间本机不会自动睡眠，屏幕仍照常关闭');
+  // gone of itself: again, a minute on
+  const gone = (e) => {
+    if (e) log(`无法阻止本机自动睡眠：${e.message}`);
+    if (awake !== p) return;
+    awake = null;
+    setTimeout(keepAwake, 60000);
+  };
+  p.on('error', gone);
+  p.on('exit', () => gone());
+}
 
 // ——— the clipboard, in step with the server's while config.clipboard says so. What is copied here
 // (daumhost.exe hands it over: /clip, text or a PNG) goes to the server with ssh, into
@@ -984,11 +1027,13 @@ const ui = createServer(async (req, res) => {
       save();
       stop();
       note('daumhost', '已暂停接收任务，隧道已关闭');
+      keepAwake();
     } else if (path === '/resume') {
       config.paused = false;
       save();
       note('daumhost', '已恢复接收任务');
       restart();
+      keepAwake();
     } else if (path === '/reconnect') {
       note('tunnel', '手动重新连接');
       restart();
@@ -1072,6 +1117,7 @@ ui.listen(UI, '127.0.0.1', () => {
   readVersion();
   startWorker();
   connect();
+  keepAwake();
   setInterval(sample, 2000);
   // a minute after starting, then every half hour
   const auto = () => config.autoUpdate !== false && checkUpdate();
