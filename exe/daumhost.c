@@ -60,7 +60,7 @@
 #define PLACE_KEY L"Software\\daumhost"
 // a closed window is hidden, and let go five minutes on: opened again before, it shows at once
 #define DISPOSE_MS (5 * 60 * 1000)
-enum { CMD_OPEN = 1, CMD_TOGGLE, CMD_RECONNECT, CMD_BROWSER, CMD_LOG, CMD_QUIT };
+enum { CMD_OPEN = 1, CMD_TOGGLE, CMD_RECONNECT, CMD_BROWSER, CMD_LOG, CMD_QUIT, CMD_LEAVE };
 // the window's timers (the last, to let a closed window go), and its word to itself to give up on WebView2
 enum { TIMER_RETRY = 2, TIMER_WATCH, TIMER_DISPOSE };
 #define WM_GIVE_UP (WM_APP + 2)
@@ -135,6 +135,8 @@ static void say(const wchar_t *fmt, ...) {
   CloseHandle(f);
 }
 #define DIP(v) MulDiv(v, dpi, 96)
+// the owner is leaving: the machine hibernates once the work is done (daumhost.mjs, leaving)
+static int leaveOn;
 static wchar_t toggleText[32] = L"暂停接收任务", lastMode[16], lastKey[64];
 
 static int isFile(const wchar_t *p) {
@@ -1092,17 +1094,17 @@ static void down(void) {
 }
 // every two seconds: how daumhost is (/tray: mode, tip, the pause item, the newest job and
 // what to say of it, the two settings, whether it was updated, whether the clipboard goes to the
-// server, a line each)
+// server, whether the machine hibernates once the work is done, a line each)
 static void tick(void) {
   if (quitting) return;
   static char buf[8192];
   static wchar_t w[8192];
   if (call("GET", "/tray", buf, sizeof buf)) return down();
   MultiByteToWideChar(CP_UTF8, 0, buf, -1, w, 8192);
-  wchar_t *f[10] = { 0 };
+  wchar_t *f[11] = { 0 };
   int n = 0;
   f[n++] = w;
-  for (wchar_t *p = w; *p && n < 10; p++)
+  for (wchar_t *p = w; *p && n < 11; p++)
     if (*p == L'\n') {
       *p = 0;
       f[n++] = p + 1;
@@ -1127,6 +1129,7 @@ static void tick(void) {
   }
   keep(f[6][0] == L'1', f[7][0] == L'1');
   clipOn = n > 9 && f[9][0] == L'1';
+  leaveOn = n > 10 && f[10][0] == L'1';
   if (n > 8 && f[8][0] == L'1') return again();
   if (wantOpen) {
     wantOpen = 0;
@@ -1177,6 +1180,7 @@ static void menu(int x, int y) {
     AppendMenuW(m, MF_STRING, CMD_OPEN, L"打开 daumhost");
     AppendMenuW(m, MF_STRING | (up ? 0 : MF_GRAYED), CMD_TOGGLE, toggleText);
     AppendMenuW(m, MF_STRING | (up && !off ? 0 : MF_GRAYED), CMD_RECONNECT, L"重新连接");
+    AppendMenuW(m, MF_STRING | (up ? 0 : MF_GRAYED) | (leaveOn ? MF_CHECKED : 0), CMD_LEAVE, L"任务完成后休眠");
     AppendMenuW(m, MF_SEPARATOR, 0, NULL);
     AppendMenuW(m, MF_STRING | (up ? 0 : MF_GRAYED), CMD_BROWSER, L"在浏览器中打开");
     AppendMenuW(m, MF_STRING, CMD_LOG, L"查看日志");
@@ -1224,6 +1228,10 @@ static LRESULT CALLBACK proc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
       break;
     case CMD_RECONNECT:
       post("/reconnect");
+      tick();
+      break;
+    case CMD_LEAVE:
+      post(leaveOn ? "/stay" : "/leave");
       tick();
       break;
     case CMD_BROWSER:

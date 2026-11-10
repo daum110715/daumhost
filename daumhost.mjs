@@ -98,6 +98,8 @@ let config = {
   manage: 'ask',
   // the clipboard in step with the server's
   clipboard: false,
+  // the owner is leaving: once the work is done, this machine hibernates (leaving(), below)
+  leave: false,
 };
 try {
   const saved = JSON.parse(readFileSync(CONFIG, 'utf8'));
@@ -527,7 +529,7 @@ function trayView() {
   };
   const tell = asking && (!ended || asking.at > ended.at) ? asking : ended;
   const v = view();
-  return [mode, `daumhost · ${tip}`, tunnel.state === 'off' ? '恢复接收任务' : '暂停接收任务', tell?.key ?? '', tell?.title ?? '', tell?.text ?? '', v.autostart ? '1' : '0', v.shortcut ? '1' : '0', trayAgain ? '1' : '0', config.clipboard ? '1' : '0']
+  return [mode, `daumhost · ${tip}${config.leave ? '，任务完成后休眠' : ''}`, tunnel.state === 'off' ? '恢复接收任务' : '暂停接收任务', tell?.key ?? '', tell?.title ?? '', tell?.text ?? '', v.autostart ? '1' : '0', v.shortcut ? '1' : '0', trayAgain ? '1' : '0', config.clipboard ? '1' : '0', config.leave ? '1' : '0']
     .map((s) => String(s).replace(/\s*\n\s*/g, ' '))
     .join('\n');
 }
@@ -730,6 +732,8 @@ setInterval(() => {
     note('tunnel', '本机已从睡眠中唤醒，重新连接');
     restart();
   }
+  // the owner is back: leaving is said anew each time
+  if (now - tick > 30000 && config.leave) stay('本机已唤醒，「任务完成后休眠」已关闭');
   tick = now;
 }, 5000);
 
@@ -831,6 +835,35 @@ async function power(action) {
   }
   throw new Error(`no such power action: ${action} (screen-off or hibernate)`);
 }
+
+// ——— leaving: the owner's own switch (the tray menu's 任务完成后休眠, /leave and /stay), in place of
+// Windows' sleep, which daumhost holds off and which would cut a job short. While it is on, this
+// machine hibernates once no job has run or waited for half an hour and nobody has touched it for 5
+// minutes; the server may bring that forward (power hibernate). Waking turns it off again ———
+const LEAVE_QUIET = 30 * 60 * 1000;
+let lastBusy = Date.now();
+let leavingNow = false;
+function stay(why) {
+  if (!config.leave) return;
+  config.leave = false;
+  save();
+  note('daumhost', why);
+}
+async function leaving() {
+  if (busyNow()) lastBusy = Date.now();
+  if (!win || !config.leave || quitting || leavingNow || Date.now() - lastBusy < LEAVE_QUIET) return;
+  leavingNow = true;
+  try {
+    if (idleOf(await ps(`${HERE}\n[Daumhost.Here]::Idle()`)) < HIBERNATE_IDLE || busyNow() || !config.leave) return;
+    stay('任务已完成，本机现在休眠');
+    execFile('shutdown.exe', ['/h'], { windowsHide: true }, (e, out, err) => e && note('daumhost', `无法休眠：${String(err || out).trim() || e.message}`));
+  } catch (e) {
+    log(`无法判断本机是否有人在用：${e.message}`);
+  } finally {
+    leavingNow = false;
+  }
+}
+setInterval(leaving, 30000);
 
 // ——— the clipboard, in step with the server's while config.clipboard says so. What is copied here
 // (daumhost.exe hands it over: /clip, text or a PNG) goes to the server with ssh, into
@@ -1093,6 +1126,13 @@ const ui = createServer(async (req, res) => {
       note('daumhost', '已恢复接收任务');
       restart();
       keepAwake();
+    } else if (path === '/leave') {
+      if (!win) throw new Error('仅 Windows 支持休眠');
+      config.leave = true;
+      save();
+      note('daumhost', '已开启「任务完成后休眠」：30 分钟内没有任务、5 分钟内无人使用时，本机休眠');
+    } else if (path === '/stay') {
+      stay('已关闭「任务完成后休眠」');
     } else if (path === '/reconnect') {
       note('tunnel', '手动重新连接');
       restart();
