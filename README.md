@@ -194,7 +194,7 @@ Lines of the form `progress 12/300` in a job's output are read as progress: show
 
 After the device wakes from sleep, loses the network, or the worker exits, daumhost reopens the tunnel and restarts the worker on its own. The log is `.tools/remote/daumhost.log`; open it from the tray menu's 查看日志 (View log) or from Settings → Updates and about.
 
-While daumhost takes jobs, and while a job still runs, the device does not go to sleep on its own, so the server still reaches it with the screen off. The screen still goes off as Windows is set to; closing the lid, the power button and Sleep in the Start menu still put it to sleep. Paused with no job running, it sleeps on its own again. `powercfg /requests` lists the request under SYSTEM, as `powershell.exe`.
+While daumhost takes jobs, and while a job still runs, the device does not go to sleep on its own, so the server still reaches it with the screen off. The screen still goes off as Windows is set to; closing the lid, the power button and Sleep in the Start menu still put it to sleep. Paused with no job running, it sleeps on its own again. `powercfg /requests` lists the request under SYSTEM, as `powershell.exe`. The server can turn the screen off at once with `daumhost power screen-off`, and, once its work is done, put the device into hibernation with `daumhost power hibernate` (see "Command line").
 
 While the tunnel is open, anyone who can log in to the server can run the device's presets. Pause daumhost (in the window or the tray menu) when it is not needed; pausing closes the tunnel.
 
@@ -211,6 +211,7 @@ On the server, `daumhost` submits jobs and manages the device's workspaces. Inst
 | `daumhost workspace [list\|add\|set\|remove]` | List the workspaces, or change them; `--create` makes a missing folder. |
 | `daumhost ls [<path>]` | List a folder on the device, or its drives. |
 | `daumhost clip [ls\|set]` | Read what was copied on the device, or put something on its clipboard; see "Clipboard sync". |
+| `daumhost power screen-off\|hibernate` | Turn the device's screen off at once, the jobs going on; or, once the work is done, let the device hibernate. Not on someone using the device. |
 
 ```sh
 daumhost ls F:/

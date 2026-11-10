@@ -30,6 +30,7 @@ const COMMANDS = {
   workspace: { takes: ['--path', '--env', '--unset'], many: ['--env', '--unset'], flags: ['--create'], anywhere: true },
   ls: { takes: [], anywhere: true },
   clip: { takes: ['--file'], anywhere: true },
+  power: { takes: [], anywhere: true },
   help: { takes: [], anywhere: true },
 };
 const HELP = {
@@ -46,6 +47,7 @@ commands:
   workspace, ws    list the workspaces, or add, change or remove one
   ls               list a folder on the device, or its drives
   clip             what was copied on the device, or put something on its clipboard
+  power            turn the device's screen off, or let it hibernate once the work is done
   help             this, or what one command does: daumhost help <command>
 
 Every command takes --json: then it prints one JSON object, its result, and nothing else.
@@ -143,6 +145,18 @@ here. Not on a machine with a desktop of its own, whose xclip it would hide.
 examples: daumhost clip
           git diff | daumhost clip set
           daumhost clip set --file shot.png`,
+  power: `usage: daumhost power screen-off [--json]
+       daumhost power hibernate [--json]
+
+screen-off turns the device's screen off at once. The jobs go on: while daumhost takes jobs, the
+device does not go to sleep on its own. hibernate puts the device into hibernation a few seconds
+on, once the work is done: it is then out of reach until someone wakes it, and daumhost connects
+again by itself. Neither on someone using the device: screen-off is refused after a key or the
+mouse in the last minute, hibernate after one in the last 5 minutes, or while jobs run or wait
+there, or a request awaits the owner's approval.
+
+examples: daumhost power screen-off
+          daumhost power hibernate`,
   help: `usage: daumhost help [<command>]
 
 What the commands do, or what one does.`,
@@ -481,6 +495,19 @@ if (what === 'workspace') {
   if (w?.error) console.log(`error: ${w.error}`);
   if (w?.missing.length) console.log(`not set up yet: ${w.missing.join(', ')}`);
   if (w) console.log(w.presets.length ? `presets: ${w.presets.map((p) => `${w.name}/${p}`).join(', ')}` : 'no presets');
+  process.exit(0);
+}
+
+// ——— the device's screen off, or the device into hibernation ———
+if (what === 'power') {
+  if (words.length !== 1 || !['screen-off', 'hibernate'].includes(words[0])) usage('power: screen-off or hibernate');
+  need('power', 'power');
+  const res = await call(port, 'POST', '/power', Buffer.from(JSON.stringify({ action: words[0] }))).catch((e) => finish({ ok: false, error: `lost the connection to the worker: ${e.message}` }, 3));
+  if (res.status === 503) finish({ ok: false, error: 'daumhost is paused' }, 3);
+  if (res.status !== 200) finish({ ok: false, error: `the worker answered ${res.status}: ${res.body.toString().slice(0, 500)}` }, 1);
+  const reply = JSON.parse(res.body);
+  if (opts.json || !reply.ok) finish(reply, reply.ok ? 0 : 1);
+  console.log(words[0] === 'hibernate' ? `the device hibernates in ${reply.in} s` : 'the device\'s screen is off');
   process.exit(0);
 }
 

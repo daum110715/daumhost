@@ -25,6 +25,7 @@ npm link
 | `workspace` | `ws` | 列出工作区，或添加、修改、移除工作区。 |
 | `ls` | | 列出设备上某个文件夹的内容，或列出设备的磁盘。 |
 | `clip` | | 读取设备上复制的内容，或写入设备的剪贴板。 |
+| `power` | | 关闭设备的屏幕，或在任务完成后让设备休眠。 |
 | `help` | | 查看命令说明。 |
 
 ## 通用规则
@@ -208,6 +209,24 @@ ln -s "$(command -v daumhost)" ~/.local/bin/xclip
 
 加 `--json` 时，`daumhost clip` 输出 `ok`、`path`、`type`（`"text"` 或 `"image"`）、以字节为单位的 `size`、以 1970 年起的毫秒数表示的 `at`，文字另有 `text`；`daumhost clip ls` 输出 `ok` 和 `entries`，各项字段同上（不含 `text`）；`daumhost clip set` 输出 `ok`、`type` 和 `size`。
 
+## power
+
+```sh
+daumhost power screen-off [--json]
+daumhost power hibernate [--json]
+```
+
+- `screen-off`：立即关闭设备的屏幕。任务照常运行：daumhost 接收任务期间，设备不会自动睡眠（见 README 的「运行状态与日志」）。移动鼠标或按任意键，屏幕重新亮起。
+- `hibernate`：用于服务器的任务完成之后。设备在回复 5 秒后休眠，之后需要有人唤醒才能再连上；唤醒后 daumhost 会自动重新连接。这 5 秒内若有新任务进来，设备不休眠。
+- 有人正在使用设备时两者都不执行：设备上最近 1 分钟内有键盘或鼠标操作时拒绝 `screen-off`，最近 5 分钟内有操作时拒绝 `hibernate`；设备上仍有任务在运行或排队、或有请求在等待审批时，同样拒绝 `hibernate`。被拒绝时退出码为 1，并说明原因。
+
+```sh
+daumhost power screen-off
+daumhost power hibernate
+```
+
+加 `--json` 时，两者都输出 `ok`、`action` 和 `idle`（设备上距最近一次键盘或鼠标操作的秒数）；`hibernate` 另有 `in`，即距休眠的秒数。
+
 ## help
 
 ```sh
@@ -236,7 +255,7 @@ daumhost help [<命令>]
 |---|---|
 | 0 | 执行成功。 |
 | 任务自身的退出码 | 任务已运行，但失败。 |
-| 1 | 请求在运行前失败：参数不被预设接受、审批被拒绝或超时、工作区变更被拒绝、文件夹无法列出，或设备上的 daumhost 版本过旧。 |
+| 1 | 请求在运行前失败：参数不被预设接受、审批被拒绝或超时、工作区变更被拒绝、文件夹无法列出、`power` 被拒绝，或设备上的 daumhost 版本过旧。 |
 | 2 | 命令的用法错误。 |
 | 3 | 无法连接设备，或 daumhost 已暂停、排队的任务已满。 |
 

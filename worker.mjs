@@ -38,7 +38,7 @@ export const PROTOCOL = 2;
 export const HEADER = 'x-daumhost';
 /** what this worker can do beyond what protocol 2 began with, so cli.mjs can tell a daumhost too old
  *  for a command from one that is not */
-export const FEATURES = ['pending', 'browse', 'create', 'clip'];
+export const FEATURES = ['pending', 'browse', 'create', 'clip', 'power'];
 const OFF = 'the owner does not let the server manage workspaces or look through folders: allow it in the local daumhost settings';
 const CLIP_OFF = 'the owner has not turned on 同步剪贴板 (clipboard sync) in the local daumhost settings';
 /** what the server puts on the clipboard, a picture's bytes as base64 */
@@ -70,12 +70,14 @@ const offer = (list) =>
  *  change(request, signal, waiting), browse(request, signal, waiting) }, `waiting()` once one waits
  *  for the owner's approval), if it takes them; `clip`: daumhost's clipboard ({ on(), set(input) }:
  *  input { type: 'text', text } or { type: 'image', data }), if it takes what the server puts on it;
+ *  `power(action)`: the screen off ('screen-off') or the machine into hibernation ('hibernate'), its
+ *  reply's fields, or a throw for why not;
  *  `keep`: a folder to keep here what each job made, the latest 30 jobs' worth;
  *  `jobs`: where each job's folder is made; `on(event)`: {type: 'queued', id, kind, …},
  *  {type: 'start', id, kind, …}, {type: 'log', id, text}, {type: 'end', id, kind, ok, code, ms,
  *  files, tail, paths}. The server it returns schedules again with `schedule()` (the limit changed,
  *  or daumhost paused) */
-export function serve({ port = WORKER, workspaces = () => [], on = () => {}, keep = null, shell = null, manage = null, clip = null, accepting = () => true, limit = () => 2, jobs = JOBS } = {}) {
+export function serve({ port = WORKER, workspaces = () => [], on = () => {}, keep = null, shell = null, manage = null, clip = null, power = null, accepting = () => true, limit = () => 2, jobs = JOBS } = {}) {
   let next = 1;
   /** the jobs running, by id: their workspace's lane (null for a Shell command) and what they are */
   const running = new Map();
@@ -256,10 +258,25 @@ export function serve({ port = WORKER, workspaces = () => [], on = () => {}, kee
           workspaces: offer(workspaces()),
         }),
       );
-    if (req.method !== 'POST' || !['/job', '/workspace', '/browse', '/clip'].includes(req.url)) return res.writeHead(404).end();
+    if (req.method !== 'POST' || !['/job', '/workspace', '/browse', '/clip', '/power'].includes(req.url)) return res.writeHead(404).end();
     if (!accepting()) return res.writeHead(503).end('daumhost paused');
     const controller = new AbortController();
     res.on('close', () => { if (!res.writableEnded) controller.abort(); });
+
+    // the screen off, or the machine into hibernation once the server's work is done
+    if (req.url === '/power') {
+      const body = await read(req, 1024, () => controller.abort());
+      if (!body) return;
+      let reply;
+      try {
+        if (!power) throw new Error('this daumhost does not take power requests');
+        reply = { ok: true, ...(await power(JSON.parse(body).action)) };
+      } catch (e) {
+        reply = { ok: false, error: e?.message ?? String(e) };
+      }
+      if (!res.destroyed) res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(reply));
+      return;
+    }
 
     // onto the clipboard here, as far as the owner has it in step with the server's
     if (req.url === '/clip') {

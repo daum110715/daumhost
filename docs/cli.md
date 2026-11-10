@@ -25,6 +25,7 @@ This installs the commands `daumhost`, `daumhost` and `daumhost` into npm's glob
 | `workspace` | `ws` | List the workspaces, or add, change or remove one. |
 | `ls` | | List a folder on the device, or its drives. |
 | `clip` | | Read what was copied on the device, or put something on its clipboard. |
+| `power` | | Turn the device's screen off, or let it hibernate once the work is done. |
 | `help` | | Show what the commands do. |
 
 ## Common rules
@@ -208,6 +209,24 @@ Then what they read is what was last copied on the device (as `daumhost clip` gi
 
 With `--json`, `daumhost clip` prints `ok`, `path`, `type` (`"text"` or `"image"`), `size` in bytes and `at` in milliseconds since 1970, and `text` for text; `daumhost clip ls` prints `ok` and `entries`, each with the same fields but `text`; `daumhost clip set` prints `ok`, `type` and `size`.
 
+## power
+
+```sh
+daumhost power screen-off [--json]
+daumhost power hibernate [--json]
+```
+
+- `screen-off`: turns the device's screen off at once. The jobs go on: while daumhost takes jobs, the device does not go to sleep on its own (see "State and logs" in the README). Moving the mouse or pressing a key turns the screen on again.
+- `hibernate`: for when the server's work is done. The device hibernates 5 seconds after the reply, and is out of reach until someone wakes it; daumhost then connects again by itself. A job that comes in during those 5 seconds keeps it up.
+- Neither on someone using the device: `screen-off` is refused when a key or the mouse was used there in the last minute, `hibernate` in the last 5 minutes, and `hibernate` also while jobs run or wait there or a request awaits the owner's approval. A refusal exits with 1 and says why.
+
+```sh
+daumhost power screen-off
+daumhost power hibernate
+```
+
+With `--json`, both print `ok`, `action` and `idle` (the seconds since the last key or mouse movement on the device); `hibernate` also `in`, the seconds until it hibernates.
+
 ## help
 
 ```sh
@@ -236,7 +255,7 @@ The device's setting 服务器管理工作区 (Server manages workspaces) decide
 |---|---|
 | 0 | Done. |
 | The job's own | A job ran and failed. |
-| 1 | The request failed without running: an argument the preset does not accept, a denied or expired approval, a refused workspace change, a folder that cannot be listed, a daumhost too old for the command. |
+| 1 | The request failed without running: an argument the preset does not accept, a denied or expired approval, a refused workspace change, a folder that cannot be listed, a refused `power`, a daumhost too old for the command. |
 | 2 | The command was used incorrectly. |
 | 3 | The device was not reached, daumhost is paused, or too many jobs already wait. |
 

@@ -558,6 +558,7 @@ function startWorker() {
     shell: shellGate,
     manage: { mode: manageMode, change: serverChange, browse: serverBrowse },
     clip: { on: () => !!config.clipboard, set: clipSet },
+    power,
     accepting: () => !config.paused && !quitting,
     on: (e) => {
       if (e.type === 'queued') {
@@ -737,6 +738,8 @@ setInterval(() => {
 // set to; the lid, the power button and Sleep in the Start menu still put it to sleep. A hidden
 // PowerShell holds the request (SetThreadExecutionState, system required) and lets go when daumhost
 // pauses, or when it is gone however it went ———
+/** Windows PowerShell's arguments for a script, hidden, encoded so nothing in it needs quoting */
+const powershell = (script) => ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')];
 let awake = null;
 function keepAwake() {
   const want = win && !quitting && (!config.paused || running.size > 0);
@@ -755,7 +758,7 @@ function keepAwake() {
   ].join('; ');
   let p;
   try {
-    p = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-Command', script], { stdio: 'ignore', windowsHide: true });
+    p = spawn('powershell.exe', powershell(script), { stdio: 'ignore', windowsHide: true });
   } catch (e) {
     log(`无法阻止本机自动睡眠：${e.message}`);
     return;
@@ -771,6 +774,61 @@ function keepAwake() {
   };
   p.on('error', gone);
   p.on('exit', () => gone());
+}
+
+// ——— power, as the server asks (worker.mjs /power, cli.mjs power): the screen off at once, the jobs
+// going on; or, once its work is done, this machine into hibernation, out of reach until someone wakes
+// it, when daumhost connects again by itself. Neither on someone using it: a key or the mouse in the
+// last minute leaves the screen on, in the last 5 minutes keeps the machine up, and so does any job
+// running or waiting, or any request awaiting the owner ———
+const SCREEN_IDLE = 60;
+const HIBERNATE_IDLE = 300;
+/** seconds after its reply the machine hibernates, for the reply to reach the server */
+const HIBERNATE_IN = 5;
+const HERE = [
+  "Add-Type -Name Here -Namespace Daumhost -MemberDefinition '",
+  '[StructLayout(LayoutKind.Sequential)] struct Last { public uint size; public uint time; }',
+  '[DllImport("user32.dll")] static extern bool GetLastInputInfo(ref Last l);',
+  '[DllImport("kernel32.dll")] static extern uint GetTickCount();',
+  '[DllImport("user32.dll")] static extern bool PostMessage(IntPtr w, uint m, IntPtr wp, IntPtr lp);',
+  'public static uint Idle() { var l = new Last { size = 8 }; GetLastInputInfo(ref l); return unchecked(GetTickCount() - l.time) / 1000; }',
+  // WM_SYSCOMMAND, SC_MONITORPOWER, off, to every window
+  'public static void ScreenOff() { PostMessage((IntPtr)0xffff, 0x0112, (IntPtr)0xF170, (IntPtr)2); }',
+  "'",
+].join('\n');
+/** what PowerShell prints of a script, trimmed */
+const ps = (script) =>
+  new Promise((done, fail) =>
+    execFile('powershell.exe', powershell(script), { windowsHide: true, timeout: 30000 }, (e, out, err) => (e ? fail(new Error(String(err).trim().split('\n')[0] || e.message)) : done(String(out).trim()))),
+  );
+const ago = (s) => (s < 60 ? `${s} s` : `${Math.floor(s / 60)} min ${s % 60} s`);
+/** the seconds since the last input, as the script's last line says them */
+const idleOf = (out) => {
+  const n = Number(out.split('\n').at(-1));
+  if (!Number.isFinite(n)) throw new Error(`could not tell how long the device has been left alone: ${out.slice(0, 200)}`);
+  return n;
+};
+async function power(action) {
+  if (!win) throw new Error('only on Windows');
+  if (action === 'screen-off') {
+    const idle = idleOf(await ps(`${HERE}\n$i = [Daumhost.Here]::Idle(); if ($i -ge ${SCREEN_IDLE}) { [Daumhost.Here]::ScreenOff() }; $i`));
+    if (idle < SCREEN_IDLE) throw new Error(`someone used the device ${ago(idle)} ago: the screen stays on`);
+    note('daumhost', '服务器关闭了屏幕，任务照常运行');
+    return { action, idle };
+  }
+  if (action === 'hibernate') {
+    if (busyNow()) throw new Error('jobs still run or wait on the device, or a request awaits the owner: it stays up');
+    const idle = idleOf(await ps(`${HERE}\n[Daumhost.Here]::Idle()`));
+    if (idle < HIBERNATE_IDLE) throw new Error(`someone used the device ${ago(idle)} ago: it stays up`);
+    note('daumhost', `服务器的任务已完成，本机将在 ${HIBERNATE_IN} 秒后休眠`);
+    setTimeout(() => {
+      // something came in meanwhile
+      if (busyNow() || config.paused || quitting) return note('daumhost', '有新任务，取消休眠');
+      execFile('shutdown.exe', ['/h'], { windowsHide: true }, (e, out, err) => e && note('daumhost', `无法休眠：${String(err || out).trim() || e.message}`));
+    }, HIBERNATE_IN * 1000);
+    return { action, idle, in: HIBERNATE_IN };
+  }
+  throw new Error(`no such power action: ${action} (screen-off or hibernate)`);
 }
 
 // ——— the clipboard, in step with the server's while config.clipboard says so. What is copied here
