@@ -175,7 +175,7 @@ The tray icon's color shows the state:
 | Red | Cannot log in to the server, or daumhost cannot start |
 | Gray | Paused, or no server set |
 
-Click the icon to open the window. The right-click menu has 打开 daumhost (Open), 暂停接收任务 (Pause; 恢复接收任务, Resume, while paused), 重新连接 (Reconnect), 关闭屏幕 (Screen off: a second later the screen goes dark, and the jobs go on), 任务完成后休眠 (Hibernate once the work is done; ticked while on), 在浏览器中打开 (Open in browser), 查看日志 (View log) and 退出 daumhost (Quit). A notification appears when a job finishes, and when a request from the server awaits approval; clicking it opens the window.
+Click the icon to open the window. The right-click menu has 打开 daumhost (Open), 暂停接收任务 (Pause; 恢复接收任务, Resume, while paused), 重新连接 (Reconnect), 关闭屏幕 (Screen off: a second later the screen goes dark, and the jobs go on), 半小时没任务后自动睡眠 (Sleep after half an hour with no job; ticked while on), 在浏览器中打开 (Open in browser), 查看日志 (View log) and 退出 daumhost (Quit). A notification appears when a job finishes, and when a request from the server awaits approval; clicking it opens the window.
 
 ### Window
 
@@ -196,7 +196,7 @@ After the device wakes from sleep, loses the network, or the worker exits, daumh
 
 While daumhost takes jobs, and while a job still runs, the device does not go to sleep on its own, so the server still reaches it with the screen off. The screen still goes off as Windows is set to; closing the lid, the power button and Sleep in the Start menu still put it to sleep. Paused with no job running, it sleeps on its own again. `powercfg /requests` lists the request under SYSTEM, as `powershell.exe`. The server can turn the screen off at once with `daumhost power screen-off`, and, once its work is done, put the device into hibernation with `daumhost power hibernate` (see "Command line").
 
-In place of Windows' own sleep, which would cut a job short, the owner turns on 任务完成后休眠 (Hibernate once the work is done) in the tray menu when leaving: the device then hibernates once no job has run or waited for 30 minutes and nobody has used it for 5 minutes. Waking it turns the switch off again.
+With 半小时没任务后自动睡眠 (Sleep after half an hour with no job) ticked in the tray menu, daumhost lets go once no job has run or waited for 30 minutes: from then the device goes to sleep as Windows is set to, and the server no longer reaches it until someone wakes it. A new job, or waking the device, holds it up for another 30 minutes. The setting stays until it is unticked.
 
 While the tunnel is open, anyone who can log in to the server can run the device's presets. Pause daumhost (in the window or the tray menu) when it is not needed; pausing closes the tunnel.
 

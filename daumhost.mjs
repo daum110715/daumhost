@@ -98,8 +98,8 @@ let config = {
   manage: 'ask',
   // the clipboard in step with the server's
   clipboard: false,
-  // the owner is leaving: once the work is done, this machine hibernates (leaving(), below)
-  leave: false,
+  // after half an hour with no job, Windows' own sleep is let through again (keepAwake(), below)
+  rest: false,
 };
 try {
   const saved = JSON.parse(readFileSync(CONFIG, 'utf8'));
@@ -529,7 +529,7 @@ function trayView() {
   };
   const tell = asking && (!ended || asking.at > ended.at) ? asking : ended;
   const v = view();
-  return [mode, `daumhost · ${tip}${config.leave ? '，任务完成后休眠' : ''}`, tunnel.state === 'off' ? '恢复接收任务' : '暂停接收任务', tell?.key ?? '', tell?.title ?? '', tell?.text ?? '', v.autostart ? '1' : '0', v.shortcut ? '1' : '0', trayAgain ? '1' : '0', config.clipboard ? '1' : '0', config.leave ? '1' : '0']
+  return [mode, `daumhost · ${tip}`, tunnel.state === 'off' ? '恢复接收任务' : '暂停接收任务', tell?.key ?? '', tell?.title ?? '', tell?.text ?? '', v.autostart ? '1' : '0', v.shortcut ? '1' : '0', trayAgain ? '1' : '0', config.clipboard ? '1' : '0', config.rest ? '1' : '0']
     .map((s) => String(s).replace(/\s*\n\s*/g, ' '))
     .join('\n');
 }
@@ -571,6 +571,7 @@ function startWorker() {
         const job = { id: e.id, kind: e.kind, what: label(e), started: Date.now(), n: 0, total: null };
         queued.delete(e.id);
         running.set(e.id, job);
+        keepAwake();
         note(isShell ? 'shell' : 'job', `开始执行任务 #${e.id}：${job.what}`);
         say('out', isShell ? `> [${e.cwd}] ${e.command} (${e.approval})` : `> ${e.command.join(' ')}`, e.id);
         outs.set(e.id, liner((line) => say('out', line, e.id)));
@@ -732,8 +733,8 @@ setInterval(() => {
     note('tunnel', '本机已从睡眠中唤醒，重新连接');
     restart();
   }
-  // the owner is back: leaving is said anew each time
-  if (now - tick > 30000 && config.leave) stay('本机已唤醒，「任务完成后休眠」已关闭');
+  // awake again: half an hour for the server to come back to its work, before config.rest lets go
+  if (now - tick > 30000) lastBusy = now;
   tick = now;
 }, 5000);
 
@@ -741,18 +742,24 @@ setInterval(() => {
 // own, so the server still reaches it with the screen off. The screen still goes off as Windows is
 // set to; the lid, the power button and Sleep in the Start menu still put it to sleep. A hidden
 // PowerShell holds the request (SetThreadExecutionState, system required) and lets go when daumhost
-// pauses, or when it is gone however it went ———
+// pauses, or when it is gone however it went. With config.rest (the tray menu's 半小时没任务后自动睡眠,
+// /rest-on and /rest-off) it also lets go once no job has run or waited for half an hour: from then
+// Windows' own sleep applies, as the owner set it, until the next job ———
+const REST_QUIET = 30 * 60 * 1000;
+let lastBusy = Date.now();
+const resting = () => !!config.rest && !busyNow() && Date.now() - lastBusy >= REST_QUIET;
 /** Windows PowerShell's arguments for a script, hidden, encoded so nothing in it needs quoting */
 const powershell = (script) => ['-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')];
 let awake = null;
 function keepAwake() {
-  const want = win && !quitting && (!config.paused || running.size > 0);
+  if (busyNow()) lastBusy = Date.now();
+  const want = win && !quitting && (!config.paused || running.size > 0) && !resting();
   if (want === !!awake) return;
   if (!want) {
     const p = awake;
     awake = null;
     p.kill();
-    return note('daumhost', '本机可以照常自动睡眠');
+    return note('daumhost', resting() ? '已有半小时没有任务，本机恢复系统的自动睡眠' : '本机可以照常自动睡眠');
   }
   const script = [
     "$k = Add-Type -Name Power -Namespace Daumhost -PassThru -MemberDefinition '[DllImport(\"kernel32.dll\")] public static extern uint SetThreadExecutionState(uint flags);'",
@@ -780,6 +787,7 @@ function keepAwake() {
   p.on('error', gone);
   p.on('exit', () => gone());
 }
+setInterval(keepAwake, 30000);
 
 // ——— power, as the server asks (worker.mjs /power, cli.mjs power): the screen off at once, the jobs
 // going on; or, once its work is done, this machine into hibernation, out of reach until someone wakes
@@ -835,35 +843,6 @@ async function power(action) {
   }
   throw new Error(`no such power action: ${action} (screen-off or hibernate)`);
 }
-
-// ——— leaving: the owner's own switch (the tray menu's 任务完成后休眠, /leave and /stay), in place of
-// Windows' sleep, which daumhost holds off and which would cut a job short. While it is on, this
-// machine hibernates once no job has run or waited for half an hour and nobody has touched it for 5
-// minutes; the server may bring that forward (power hibernate). Waking turns it off again ———
-const LEAVE_QUIET = 30 * 60 * 1000;
-let lastBusy = Date.now();
-let leavingNow = false;
-function stay(why) {
-  if (!config.leave) return;
-  config.leave = false;
-  save();
-  note('daumhost', why);
-}
-async function leaving() {
-  if (busyNow()) lastBusy = Date.now();
-  if (!win || !config.leave || quitting || leavingNow || Date.now() - lastBusy < LEAVE_QUIET) return;
-  leavingNow = true;
-  try {
-    if (idleOf(await ps(`${HERE}\n[Daumhost.Here]::Idle()`)) < HIBERNATE_IDLE || busyNow() || !config.leave) return;
-    stay('任务已完成，本机现在休眠');
-    execFile('shutdown.exe', ['/h'], { windowsHide: true }, (e, out, err) => e && note('daumhost', `无法休眠：${String(err || out).trim() || e.message}`));
-  } catch (e) {
-    log(`无法判断本机是否有人在用：${e.message}`);
-  } finally {
-    leavingNow = false;
-  }
-}
-setInterval(leaving, 30000);
 
 // ——— the clipboard, in step with the server's while config.clipboard says so. What is copied here
 // (daumhost.exe hands it over: /clip, text or a PNG) goes to the server with ssh, into
@@ -1126,13 +1105,11 @@ const ui = createServer(async (req, res) => {
       note('daumhost', '已恢复接收任务');
       restart();
       keepAwake();
-    } else if (path === '/leave') {
-      if (!win) throw new Error('仅 Windows 支持休眠');
-      config.leave = true;
+    } else if (path === '/rest-on' || path === '/rest-off') {
+      config.rest = path === '/rest-on';
       save();
-      note('daumhost', '已开启「任务完成后休眠」：30 分钟内没有任务、5 分钟内无人使用时，本机休眠');
-    } else if (path === '/stay') {
-      stay('已关闭「任务完成后休眠」');
+      note('daumhost', config.rest ? '已开启：半小时没有任务后，本机恢复系统的自动睡眠' : '已关闭：接收任务期间本机不会自动睡眠');
+      keepAwake();
     } else if (path === '/reconnect') {
       note('tunnel', '手动重新连接');
       restart();
