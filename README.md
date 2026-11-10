@@ -175,7 +175,7 @@ The tray icon's color shows the state:
 | Red | Cannot log in to the server, or daumhost cannot start |
 | Gray | Paused, or no server set |
 
-Click the icon to open the window. The right-click menu has 打开 daumhost (Open), 暂停接收任务 (Pause; 恢复接收任务, Resume, while paused), 重新连接 (Reconnect), 任务完成后休眠 (Hibernate once the work is done; ticked while on), 在浏览器中打开 (Open in browser), 查看日志 (View log) and 退出 daumhost (Quit). A notification appears when a job finishes, and when a request from the server awaits approval; clicking it opens the window.
+Click the icon to open the window. The right-click menu has 打开 daumhost (Open), 暂停接收任务 (Pause; 恢复接收任务, Resume, while paused), 重新连接 (Reconnect), 关闭屏幕 (Screen off: a second later the screen goes dark, and the jobs go on), 任务完成后休眠 (Hibernate once the work is done; ticked while on), 在浏览器中打开 (Open in browser), 查看日志 (View log) and 退出 daumhost (Quit). A notification appears when a job finishes, and when a request from the server awaits approval; clicking it opens the window.
 
 ### Window
 

@@ -60,9 +60,9 @@
 #define PLACE_KEY L"Software\\daumhost"
 // a closed window is hidden, and let go five minutes on: opened again before, it shows at once
 #define DISPOSE_MS (5 * 60 * 1000)
-enum { CMD_OPEN = 1, CMD_TOGGLE, CMD_RECONNECT, CMD_BROWSER, CMD_LOG, CMD_QUIT, CMD_LEAVE };
+enum { CMD_OPEN = 1, CMD_TOGGLE, CMD_RECONNECT, CMD_BROWSER, CMD_LOG, CMD_QUIT, CMD_LEAVE, CMD_SCREEN };
 // the window's timers (the last, to let a closed window go), and its word to itself to give up on WebView2
-enum { TIMER_RETRY = 2, TIMER_WATCH, TIMER_DISPOSE };
+enum { TIMER_RETRY = 2, TIMER_WATCH, TIMER_DISPOSE, TIMER_SCREEN };
 #define WM_GIVE_UP (WM_APP + 2)
 // the page's word to start again as administrator
 #define WM_ELEVATE (WM_APP + 3)
@@ -1180,6 +1180,7 @@ static void menu(int x, int y) {
     AppendMenuW(m, MF_STRING, CMD_OPEN, L"打开 daumhost");
     AppendMenuW(m, MF_STRING | (up ? 0 : MF_GRAYED), CMD_TOGGLE, toggleText);
     AppendMenuW(m, MF_STRING | (up && !off ? 0 : MF_GRAYED), CMD_RECONNECT, L"重新连接");
+    AppendMenuW(m, MF_STRING, CMD_SCREEN, L"关闭屏幕");
     AppendMenuW(m, MF_STRING | (up ? 0 : MF_GRAYED) | (leaveOn ? MF_CHECKED : 0), CMD_LEAVE, L"任务完成后休眠");
     AppendMenuW(m, MF_SEPARATOR, 0, NULL);
     AppendMenuW(m, MF_STRING | (up ? 0 : MF_GRAYED), CMD_BROWSER, L"在浏览器中打开");
@@ -1209,6 +1210,12 @@ static LRESULT CALLBACK proc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
     }
     return 0;
   case WM_TIMER:
+    if (wp == TIMER_SCREEN) {
+      KillTimer(h, wp);
+      // WM_SYSCOMMAND, SC_MONITORPOWER, off, to every window: the screen goes dark, the jobs go on
+      PostMessageW(HWND_BROADCAST, WM_SYSCOMMAND, SC_MONITORPOWER, 2);
+      return 0;
+    }
     tick();
     return 0;
   case WM_CLIPBOARDUPDATE:
@@ -1233,6 +1240,10 @@ static LRESULT CALLBACK proc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
     case CMD_LEAVE:
       post(leaveOn ? "/stay" : "/leave");
       tick();
+      break;
+    case CMD_SCREEN:
+      // a second on, once the hand is off the mouse: moving it would light the screen again
+      SetTimer(h, TIMER_SCREEN, 1000, NULL);
       break;
     case CMD_BROWSER:
       ShellExecuteW(NULL, L"open", L"http://127.0.0.1:7799/", NULL, NULL, SW_SHOWNORMAL);
