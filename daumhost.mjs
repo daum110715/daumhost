@@ -752,8 +752,9 @@ function keepAwake() {
   }
   const script = [
     "$k = Add-Type -Name Power -Namespace Daumhost -PassThru -MemberDefinition '[DllImport(\"kernel32.dll\")] public static extern uint SetThreadExecutionState(uint flags);'",
-    // ES_CONTINUOUS | ES_SYSTEM_REQUIRED: held while this thread lives; the display is left alone
-    '[void]$k::SetThreadExecutionState(0x80000001)',
+    // ES_CONTINUOUS | ES_SYSTEM_REQUIRED (0x80000001): held while this thread lives; the display is left alone.
+    // In decimal: PowerShell reads the hex as a negative int, which the uint parameter refuses
+    '[void]$k::SetThreadExecutionState([uint32]2147483649)',
     `while (Get-Process -Id ${process.pid} -ErrorAction SilentlyContinue) { Start-Sleep -Seconds 5 }`,
   ].join('; ');
   let p;

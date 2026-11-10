@@ -1,6 +1,6 @@
 {
   "name": "daumhost",
-  "version": "0.8.5",
+  "version": "0.8.6",
   "private": true,
   "license": "MIT",
   "description": "Lets agents on a server hand heavy jobs to a Windows machine over a reverse SSH tunnel",
