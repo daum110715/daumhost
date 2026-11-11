@@ -2,6 +2,8 @@
 
 English | [中文](README.zh-CN.md)
 
+To run jobs with daumhost, [docs/usage.md](docs/usage.md) is all you need.
+
 daumhost lets agents running on a server hand heavy jobs to another computer, currently a Windows machine. The machine that runs the jobs connects to the server through a reverse SSH tunnel, so it needs no public IP address and no open inbound port.
 
 It takes any heavy job from any project. Its own window and messages are in Chinese.

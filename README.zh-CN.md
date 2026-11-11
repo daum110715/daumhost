@@ -2,6 +2,8 @@
 
 [English](README.md) | 中文
 
+用 daumhost 跑任务只需读 [docs/usage.zh-CN.md](docs/usage.zh-CN.md)。
+
 daumhost 让服务器上运行的 agent 把高负载任务交给另一台电脑执行，目前支持 Windows。执行任务的电脑主动通过反向 SSH 隧道连接服务器，因此不需要公网 IP，也不需要开放入站端口。
 
 它接任何项目的任何重活。
