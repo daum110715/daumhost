@@ -86,7 +86,8 @@ function liner(each) {
 const CONFIG = join(dir, 'config.json');
 let config = {
   // the server by its address, so no ssh config is needed (the key: the default one, or the agent's)
-  ssh: { target: '', port: '' },
+  // via: https://<server>/<token> of the server's bridge.mjs, for networks that slow plain ssh down
+  ssh: { target: '', port: '', via: '' },
   // the folders jobs may work in, [{ name, path, env }] (workspace.mjs)
   workspaces: [],
   paused: false,
@@ -620,7 +621,20 @@ function startWorker() {
 // ——— the tunnel: ssh, again and again ———
 /** what every ssh to the server is run with: never asking for a password (there is nobody to type
  *  it), giving up on a server that does not answer */
-const sshOptions = () => ['-T', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15', ...(config.ssh.port ? ['-p', config.ssh.port] : [])];
+const sshOptions = () => [
+  '-T', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15',
+  ...(config.ssh.port ? ['-p', config.ssh.port] : []),
+  // over HTTPS through the server's bridge.mjs: via.mjs, run by this same node, carries ssh's bytes
+  ...(config.ssh.via ? ['-o', `ProxyCommand="${process.execPath}" "${join(here, 'via.mjs')}" ${config.ssh.via}`] : []),
+];
+// the server the bridge is on, never its token, for the log and the window
+const viaHost = () => {
+  try {
+    return config.ssh.via ? new URL(config.ssh.via).host : '';
+  } catch {
+    return '';
+  }
+};
 let ssh = null;
 let timer = null;
 let tries = 0;
@@ -646,7 +660,7 @@ function connect() {
     '-R', `${port}:127.0.0.1:${WORKER}`,
     config.ssh.target,
   ];
-  note('tunnel', `正在连接服务器：ssh ${config.ssh.target}${config.ssh.port ? ` -p ${config.ssh.port}` : ''}，服务器端端口 ${port}`);
+  note('tunnel', `正在连接服务器：ssh ${config.ssh.target}${config.ssh.port ? ` -p ${config.ssh.port}` : ''}${viaHost() ? `，经由 ${viaHost()}` : ''}，服务器端端口 ${port}`);
   const p = spawn('ssh', args, { windowsHide: true });
   ssh = p;
   tunnel = { state: 'connecting', port };
@@ -1116,11 +1130,13 @@ const ui = createServer(async (req, res) => {
     } else if (path === '/config') {
       let reconnect = false;
       if (data.ssh) {
-        const ssh = { target: String(data.ssh.target ?? '').trim(), port: String(data.ssh.port ?? '').trim() };
+        const ssh = { target: String(data.ssh.target ?? '').trim(), port: String(data.ssh.port ?? '').trim(), via: String(data.ssh.via ?? config.ssh.via ?? '').trim() };
         if (ssh.port && !/^\d{1,5}$/.test(ssh.port)) throw new Error('端口必须是数字');
         // never an option of ssh's own
         if (/^-|\s/.test(ssh.target)) throw new Error('SSH 地址的格式应为「用户名@服务器」');
-        reconnect = ssh.target !== config.ssh.target || ssh.port !== config.ssh.port;
+        // it goes into ssh's ProxyCommand: one plain address, nothing a shell would read
+        if (ssh.via && !/^https?:\/\/[A-Za-z0-9.-]+(:\d{1,5})?\/[A-Za-z0-9._~-]+$/.test(ssh.via)) throw new Error('经由的格式应为「https://服务器/令牌」');
+        reconnect = ssh.target !== config.ssh.target || ssh.port !== config.ssh.port || ssh.via !== config.ssh.via;
         config.ssh = ssh;
       }
       if (data.workspaces) {

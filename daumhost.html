@@ -2394,9 +2394,10 @@
                 <label class="field"><span>SSH 地址</span><input type="text" id="ssh-target" placeholder="用户名@服务器" spellcheck="false" autocomplete="off" /></label>
                 <label class="field"><span>端口</span><input type="text" id="ssh-port" inputmode="numeric" placeholder="22" autocomplete="off" /></label>
               </div>
+              <label class="field"><span>经由</span><input type="text" id="ssh-via" placeholder="https://服务器/令牌 不用就留空" spellcheck="false" autocomplete="off" /></label>
             </div>
           </div>
-          <p class="hint">修改后自动保存，并重新连接。<span class="status" id="ssh-status" role="status"></span></p>
+          <p class="hint">修改后自动保存，并重新连接。网络把 SSH 限速时，「经由」填服务器上 bridge.mjs 的 HTTPS 地址，隧道改走 HTTPS。<span class="status" id="ssh-status" role="status"></span></p>
           <section class="block">
             <div class="block-head"><h3>隧道</h3></div>
             <div class="rows">
@@ -3506,7 +3507,7 @@
 
       // ——— 设置 · 连接: saved once changed, and the tunnel as it is ———
       const editing = new Set();
-      for (const id of ['ssh-target', 'ssh-port']) {
+      for (const id of ['ssh-target', 'ssh-port', 'ssh-via']) {
         const input = $(`#${id}`);
         input.addEventListener('input', () => editing.add(id));
         input.addEventListener('change', saveServer);
@@ -3514,9 +3515,10 @@
       }
       async function saveServer() {
         try {
-          await change('/config', { ssh: { target: $('#ssh-target').value, port: $('#ssh-port').value } });
+          await change('/config', { ssh: { target: $('#ssh-target').value, port: $('#ssh-port').value, via: $('#ssh-via').value } });
           editing.delete('ssh-target');
           editing.delete('ssh-port');
+          editing.delete('ssh-via');
           said($('#ssh-status'));
         } catch (e) {
           said($('#ssh-status'), e.message);
@@ -3526,6 +3528,7 @@
         for (const [id, v] of [
           ['ssh-target', S.config.ssh.target ?? ''],
           ['ssh-port', S.config.ssh.port ?? ''],
+          ['ssh-via', S.config.ssh.via ?? ''],
         ])
           if (!editing.has(id) && document.activeElement !== $(`#${id}`)) $(`#${id}`).value = v;
         $('#ssh-target').classList.toggle('missing', !S.config.ssh.target);

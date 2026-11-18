@@ -68,7 +68,36 @@ daumhost 让服务器上运行的 agent 把高负载任务交给另一台电脑�
 
 ### 服务器
 
-位于「设置 → 连接」。「SSH 地址」写成 `用户名@服务器`，「端口」为服务器的 SSH 端口，留空时为 22。未填写 SSH 地址时，daumhost 不建立隧道。修改后，隧道重新连接。
+位于「设置 → 连接」。「SSH 地址」写成 `用户名@服务器`，「端口」为服务器的 SSH 端口，留空时为 22。未填写 SSH 地址时，daumhost 不建立隧道。「经由」通常留空，见下文「经由 HTTPS」。修改后，隧道重新连接。
+
+#### 经由 HTTPS
+
+有的网络会把到境外服务器的 SSH 单独限速（实测同一条线 SSH 约 12 KB/s，HTTPS 约 120 KB/s），上传任务文件要等好几分钟，期间 `daumhost status` 也连不上。这时让隧道改走 HTTPS：
+
+1. 在服务器上运行 `bridge.mjs`：它只监听 `127.0.0.1`，把带令牌的 `Upgrade: daumhost-ssh` 请求接到本机 sshd。令牌是 24 个字符以上的随机串，和端口一起放在只有自己可读的环境文件里：
+
+   ```ini
+   # ~/.config/daumhost/bridge.env（权限 600）
+   BRIDGE_TOKEN=<openssl rand -hex 24 的输出>
+   BRIDGE_PORT=7720
+   SSH_PORT=22
+   ```
+
+   用 systemd 用户单元常驻：`ExecStart=/usr/bin/node <仓库>/bridge.mjs`，`EnvironmentFile=%h/.config/daumhost/bridge.env`，`Restart=always`。
+
+2. 让反向代理把一个 HTTPS 地址转给它，例如 Caddy：
+
+   ```
+   tun.example.com {
+     reverse_proxy 127.0.0.1:7720 {
+       flush_interval -1
+     }
+   }
+   ```
+
+3. 在设备的「设置 → 连接」中，「经由」填 `https://tun.example.com/<令牌>`。ssh 随即通过 `via.mjs`（由 daumhost 自带的 Node.js 运行）作为 `ProxyCommand` 连接；登录仍然使用原来的密钥，「SSH 地址」和「端口」照填。
+
+令牌不对的请求一律得到 404。bridge 转来的连接在 sshd 看来都来自 127.0.0.1，fail2ban 之类按来源封禁的工具管不到它们，所以令牌须保密；服务器关闭了密码登录时更稳妥。
 
 ### 工作区
 
@@ -345,6 +374,8 @@ ssh -N -R 7700:127.0.0.1:7700 -p <端口> <用户名>@<服务器>
 | `shell.mjs` | Shell 任务的审批、白名单和执行，以及审批队列。 |
 | `daumhost.mjs` | daumhost 的后台进程：管理任务服务、隧道和配置，并在 `127.0.0.1:7799` 上提供窗口页面。 |
 | `daumhost.html` | daumhost 的窗口页面。 |
+| `via.mjs` | 设置了「经由」时 ssh 的 `ProxyCommand`：经 HTTPS 连到服务器上的 `bridge.mjs`。 |
+| `bridge.mjs` | 在服务器上运行：把带令牌的 HTTPS 升级请求接到本机 sshd（见「经由 HTTPS」）。 |
 | `daumhost.exe` | 托盘程序的编译产物。 |
 | `WebView2Loader.dll` | 托盘程序窗口所需的 WebView2 加载器。 |
 | `exe/` | 托盘程序的源码（`daumhost.c`、`daumhost.rc`、`daumhost.manifest`）、安装程序的源码（`setup.c`、`setup.rc`）、两者共用的 `common.h`，以及编译脚本：`build.mjs` 备齐文件并选择在哪里编译，`compile.mjs` 调用 mingw-w64 编译。 |

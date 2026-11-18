@@ -68,7 +68,36 @@ The settings are stored in `.tools/remote/config.json` and edited in the window'
 
 ### Server
 
-In Settings → Connection. Write the SSH address as `user@server`. The port is the server's SSH port; when empty, 22 is used. daumhost opens no tunnel until an address is set. Changing either reconnects the tunnel.
+In Settings → Connection. Write the SSH address as `user@server`. The port is the server's SSH port; when empty, 22 is used. daumhost opens no tunnel until an address is set. 经由 (Via) is usually left empty; see Over HTTPS below. Changing any of them reconnects the tunnel.
+
+#### Over HTTPS
+
+Some networks slow SSH to servers abroad on its own (on one line, measured: SSH about 12 KB/s, HTTPS about 120 KB/s), so a job's files take minutes to upload and `daumhost status` cannot get through meanwhile. The tunnel can then go over HTTPS:
+
+1. On the server, run `bridge.mjs`. It listens on `127.0.0.1` only and hands requests carrying the token and `Upgrade: daumhost-ssh` to the local sshd. The token is a random string of 24 characters or more, kept with the port in an environment file only you can read:
+
+   ```ini
+   # ~/.config/daumhost/bridge.env (mode 600)
+   BRIDGE_TOKEN=<output of openssl rand -hex 24>
+   BRIDGE_PORT=7720
+   SSH_PORT=22
+   ```
+
+   Keep it running with a systemd user unit: `ExecStart=/usr/bin/node <repo>/bridge.mjs`, `EnvironmentFile=%h/.config/daumhost/bridge.env`, `Restart=always`.
+
+2. Have the reverse proxy pass an HTTPS address to it, for example with Caddy:
+
+   ```
+   tun.example.com {
+     reverse_proxy 127.0.0.1:7720 {
+       flush_interval -1
+     }
+   }
+   ```
+
+3. On the device, in Settings → Connection, set 经由 (Via) to `https://tun.example.com/<token>`. ssh then connects through `via.mjs` (run by daumhost's own Node.js) as its `ProxyCommand`; it still logs in with the same key, and the SSH address and port stay as they are.
+
+A request without the right token gets a 404. sshd sees every bridged connection as coming from 127.0.0.1, out of reach of tools such as fail2ban that ban by source, so keep the token secret; a server with password login turned off is safer still.
 
 ### Workspaces
 
@@ -345,6 +374,8 @@ The release key's private half is `.tools/release/key.pem`, outside version cont
 | `shell.mjs` | Approval, allowlist and execution of Shell jobs, and the approval queue. |
 | `daumhost.mjs` | daumhost's background process: manages the worker, the tunnel and the settings, and serves the window at `127.0.0.1:7799`. |
 | `daumhost.html` | daumhost's window. |
+| `via.mjs` | ssh's `ProxyCommand` when 经由 (Via) is set: reaches the server's `bridge.mjs` over HTTPS. |
+| `bridge.mjs` | Runs on the server: hands HTTPS upgrade requests carrying the token to the local sshd (see Over HTTPS). |
 | `daumhost.exe` | The built tray program. |
 | `WebView2Loader.dll` | The WebView2 loader the tray program's window needs. |
 | `exe/` | The tray program's sources (`daumhost.c`, `daumhost.rc`, `daumhost.manifest`), the installer's (`setup.c`, `setup.rc`), `common.h` shared by both, and the build scripts: `build.mjs` gathers the files and chooses where to compile, `compile.mjs` runs mingw-w64. |
