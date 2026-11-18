@@ -26,7 +26,7 @@ daumhost run --src <dir> --out <dir> common/node [args…]
 
 ## Use a browser
 
-Copy `kit/chrome.mjs` next to `main.mjs`:
+Copy `kit/chrome.mjs` next to `main.mjs` (replace any copy made before 2026-11-18: those never ended their browser, which stayed behind drawing until the machine froze). The browser also ends when the script exits or fails without `close()`.
 
 ```js
 import { launch } from './chrome.mjs';

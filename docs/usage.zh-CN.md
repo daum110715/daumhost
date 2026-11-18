@@ -26,7 +26,7 @@ daumhost run --src <目录> --out <目录> common/node [参数…]
 
 ## 用浏览器
 
-把 `kit/chrome.mjs` 复制到 `main.mjs` 旁边：
+把 `kit/chrome.mjs` 复制到 `main.mjs` 旁边（2026-11-18 之前复制的副本要换掉：旧版关不掉浏览器，Chrome 会一直留在后台渲染，几次下来电脑就卡死了）。脚本没调 `close()` 就退出或者出错时，浏览器也会随它一起结束。
 
 ```js
 import { launch } from './chrome.mjs';
