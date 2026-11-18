@@ -21,7 +21,7 @@ const out = join(tools, 'out');
 const NODE = 'v24.22.1';
 /** daumhost's own files (daumhost.json and exe/compile.mjs: its own folder, registered as a
  *  workspace, compiles daumhost.exe; exe/build.mjs) */
-const APP = ['daumhost.mjs', 'worker.mjs', 'shell.mjs', 'workspace.mjs', 'update.mjs', 'cli.mjs', 'daumhost.html', 'daumhost.exe', 'WebView2Loader.dll', 'daumhost.json', 'exe/compile.mjs', 'LICENSE', 'README.md', 'README.zh-CN.md'];
+const APP = ['daumhost.mjs', 'worker.mjs', 'shell.mjs', 'workspace.mjs', 'update.mjs', 'cli.mjs', 'via.mjs', 'daumhost.html', 'daumhost.exe', 'WebView2Loader.dll', 'daumhost.json', 'exe/compile.mjs', 'LICENSE', 'README.md', 'README.zh-CN.md'];
 
 const sha256 = (data) => createHash('sha256').update(data).digest('hex');
 const git = (args) => execFileSync('git', args, { cwd: repo, encoding: 'utf8' });
