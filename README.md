@@ -97,6 +97,8 @@ Some networks slow SSH to servers abroad on its own (on one line, measured: SSH 
 
 3. On the device, in Settings → Connection, set 经由 (Via) to `https://tun.example.com/<token>`. ssh then connects through `via.mjs` (run by daumhost's own Node.js) as its `ProxyCommand`; it still logs in with the same key, and the SSH address and port stay as they are.
 
+When 经由 does not get through in 25 seconds, daumhost connects straight to the server instead and tries 经由 again on a reconnect ten minutes or more later. `via.mjs` asks the system and DNS over HTTPS (223.5.5.5, 1.1.1.1) for the server's address at once, so a resolver that fails does not stop it.
+
 A request without the right token gets a 404. sshd sees every bridged connection as coming from 127.0.0.1, out of reach of tools such as fail2ban that ban by source, so keep the token secret; a server with password login turned off is safer still.
 
 ### Workspaces
