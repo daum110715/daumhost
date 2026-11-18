@@ -621,11 +621,16 @@ function startWorker() {
 // ——— the tunnel: ssh, again and again ———
 /** what every ssh to the server is run with: never asking for a password (there is nobody to type
  *  it), giving up on a server that does not answer */
+// whether the tunnel, and the clipboard's ssh with it, goes through 经由 this time; after it failed, ssh
+// goes straight to the server until a reconnect at least VIA_AGAIN later
+let viaNow = false;
+let viaFailedAt = 0;
+const VIA_AGAIN = 10 * 60_000;
 const sshOptions = () => [
   '-T', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=15',
   ...(config.ssh.port ? ['-p', config.ssh.port] : []),
   // over HTTPS through the server's bridge.mjs: via.mjs, run by this same node, carries ssh's bytes
-  ...(config.ssh.via ? ['-o', `ProxyCommand="${process.execPath}" "${join(here, 'via.mjs')}" ${config.ssh.via}`] : []),
+  ...(viaNow ? ['-o', `ProxyCommand="${process.execPath}" "${join(here, 'via.mjs')}" ${config.ssh.via}`] : []),
 ];
 // the server the bridge is on, never its token, for the log and the window
 const viaHost = () => {
@@ -650,6 +655,7 @@ function connect() {
     return push();
   }
   const port = PORTS[slot % PORTS.length];
+  viaNow = !!config.ssh.via && Date.now() - viaFailedAt >= VIA_AGAIN;
   const args = [
     '-N', '-v',
     ...sshOptions(),
@@ -660,7 +666,9 @@ function connect() {
     '-R', `${port}:127.0.0.1:${WORKER}`,
     config.ssh.target,
   ];
-  note('tunnel', `正在连接服务器：ssh ${config.ssh.target}${config.ssh.port ? ` -p ${config.ssh.port}` : ''}${viaHost() ? `，经由 ${viaHost()}` : ''}，服务器端端口 ${port}`);
+  note('tunnel', `正在连接服务器：ssh ${config.ssh.target}${config.ssh.port ? ` -p ${config.ssh.port}` : ''}${viaNow ? `，经由 ${viaHost()}` : ''}，服务器端端口 ${port}`);
+  const via = viaNow;
+  let wasUp = false;
   const p = spawn('ssh', args, { windowsHide: true });
   ssh = p;
   tunnel = { state: 'connecting', port };
@@ -670,12 +678,16 @@ function connect() {
     if (ssh !== p || tunnel.state !== 'connecting') return;
     tunnel = { state: 'up', port, since: Date.now() };
     tries = 0;
+    wasUp = true;
+    if (via) viaFailedAt = 0;
     note('tunnel', `隧道已建立：服务器的 127.0.0.1:${port} 已连接到本机的任务服务`);
     // what was copied while there was no getting through
     sendClip();
   };
-  // ssh -v says so; or, failing that, still there after a while with nothing refused
-  const still = setTimeout(up, 10000);
+  // ssh -v says so; or, failing that, still there after a while with nothing refused. Through 经由 only its
+  // word counts: ssh waits on a ProxyCommand that hangs with no timeout of its own, so one not through in
+  // 25 seconds is given up
+  const still = via ? setTimeout(() => ssh === p && !wasUp && p.kill(), 25000) : setTimeout(up, 10000);
   // what ssh says, without its debugging
   const lines = liner((line) => {
     if (!/^debug\d?:/.test(line)) say('ssh', line);
@@ -709,6 +721,14 @@ function connect() {
     if (/Permission denied|Host key verification failed|Could not resolve hostname|ENOENT/i.test(err)) {
       tunnel = { state: 'auth', message: said };
       return note('tunnel', `无法登录服务器：${said || '原因不明'}`);
+    }
+    // 经由 never got through: straight to the server, at once
+    if (via && !wasUp) {
+      viaFailedAt = Date.now();
+      tunnel = { state: 'retry', retryAt: Date.now() + 500, wait: 500, message: said };
+      note('tunnel', `经由 ${viaHost()} 没有连通${said ? `：${said}` : ''}。改为直接连接服务器，${VIA_AGAIN / 60_000} 分钟后重连时再试经由`);
+      timer = setTimeout(connect, 500);
+      return;
     }
     // the port on the server still held by a connection that died: the next one, at once
     const held = /remote port forwarding failed/i.test(err);
@@ -1137,6 +1157,8 @@ const ui = createServer(async (req, res) => {
         // it goes into ssh's ProxyCommand: one plain address, nothing a shell would read
         if (ssh.via && !/^https?:\/\/[A-Za-z0-9.-]+(:\d{1,5})?\/[A-Za-z0-9._~-]+$/.test(ssh.via)) throw new Error('经由的格式应为「https://服务器/令牌」');
         reconnect = ssh.target !== config.ssh.target || ssh.port !== config.ssh.port || ssh.via !== config.ssh.via;
+        // a new address gets its chance at once
+        if (ssh.via !== config.ssh.via) viaFailedAt = 0;
         config.ssh = ssh;
       }
       if (data.workspaces) {

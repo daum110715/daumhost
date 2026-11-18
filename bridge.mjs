@@ -25,10 +25,17 @@ const allowed = (path) => {
 
 const server = createServer((req, res) => res.writeHead(404, { 'Content-Length': 0 }).end());
 server.on('upgrade', (req, socket, head) => {
+  const from = req.headers['x-forwarded-for'] ?? socket.remoteAddress;
   if (!allowed(req.url) || req.headers.upgrade?.toLowerCase() !== 'daumhost-ssh') {
+    console.log(`refused ${from}: ${allowed(req.url) ? `Upgrade: ${req.headers.upgrade}` : 'wrong path'}`);
     socket.end('HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n');
     return;
   }
+  const t0 = Date.now();
+  let up = 0;
+  let down = 0;
+  console.log(`open ${from}`);
+  socket.once('close', () => console.log(`closed ${from} after ${((Date.now() - t0) / 1000).toFixed(1)}s, ${up} bytes in, ${down} out`));
   const ssh = connect(sshPort, '127.0.0.1');
   const end = () => {
     socket.destroy();
@@ -43,6 +50,8 @@ server.on('upgrade', (req, socket, head) => {
     ssh.setNoDelay(true);
     socket.write('HTTP/1.1 101 Switching Protocols\r\nConnection: Upgrade\r\nUpgrade: daumhost-ssh\r\n\r\n');
     if (head.length) ssh.write(head);
+    ssh.on('data', (d) => (down += d.length));
+    socket.on('data', (d) => (up += d.length));
     socket.pipe(ssh).pipe(socket);
   });
 });
